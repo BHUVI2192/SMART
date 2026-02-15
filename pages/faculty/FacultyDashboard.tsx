@@ -309,48 +309,115 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
 
       {/* Add Class Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-lg font-bold text-slate-900">Add New Class</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in group">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity duration-500 overflow-hidden" onClick={() => setIsModalOpen(false)}>
+            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-indigo-500/20 rounded-full blur-[100px] animate-bop" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-500/20 rounded-full blur-[100px] animate-bop" style={{ animationDelay: '-2s' }} />
+          </div>
+
+          <div className="candy-card w-full max-w-md p-8 sm:p-10 animate-scale-in relative z-10">
+            <div className="flex justify-between items-center mb-10">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                  <Plus className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight">Add New Class</h3>
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">Session Scheduler</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-all duration-300"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddClass} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Subject</label>
-                <select
-                  className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50 transition-all hover:border-slate-300"
-                  value={newClassSubject}
-                  onChange={(e) => setNewClassSubject(e.target.value)}
-                >
-                  {subjects.map(s => <option key={s.code} value={s.code}>{s.name} ({s.code})</option>)}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Start</label>
-                  <input type="time" required className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassStart} onChange={(e) => setNewClassStart(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">End</label>
-                  <input type="time" required className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassEnd} onChange={(e) => setNewClassEnd(e.target.value)} />
+            <form onSubmit={handleAddClass} className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-400 ml-4 uppercase tracking-[0.2em]">Subject</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                    <BookOpen className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <select
+                    className="w-full pl-14 pr-6 py-4 appearance-none"
+                    value={newClassSubject}
+                    onChange={(e) => setNewClassSubject(e.target.value)}
+                  >
+                    {subjects.map(s => <option key={s.code} value={s.code}>{s.name} ({s.code})</option>)}
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Room</label>
-                <input type="text" placeholder="e.g. LH-202" className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassRoom} onChange={(e) => setNewClassRoom(e.target.value)} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-xs font-black text-slate-400 ml-4 uppercase tracking-[0.2em]">Start Time</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                      <Clock className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <input
+                      type="time"
+                      required
+                      className="w-full pl-14 pr-5 py-4"
+                      value={newClassStart}
+                      onChange={(e) => setNewClassStart(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-black text-slate-400 ml-4 uppercase tracking-[0.2em]">End Time</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                      <Clock className="h-5 w-5 text-slate-400" />
+                    </div>
+                    <input
+                      type="time"
+                      required
+                      className="w-full pl-14 pr-5 py-4"
+                      value={newClassEnd}
+                      onChange={(e) => setNewClassEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-400 ml-4 uppercase tracking-[0.2em]">Room / Location</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                    <MapPin className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. LH-202"
+                    className="w-full pl-14 pr-6 py-4"
+                    value={newClassRoom}
+                    onChange={(e) => setNewClassRoom(e.target.value)}
+                  />
+                </div>
               </div>
 
               {addError && (
-                <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{addError}</p>
+                <p className="text-xs text-red-500 font-bold bg-red-50 px-4 py-3 rounded-2xl animate-shake">{addError}</p>
               )}
-              <button type="submit" disabled={submitting} className="w-full gradient-primary text-white py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                {submitting ? 'Adding...' : 'Add to Schedule'}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full btn-primary py-5 rounded-[20px] text-base"
+              >
+                {submitting ? (
+                  <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <div className="flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Add to Schedule
+                  </div>
+                )}
               </button>
             </form>
           </div>

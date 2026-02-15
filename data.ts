@@ -28,6 +28,16 @@ export const TODAY_TIMETABLE: TimetableEntry[] = [
   { id: 'tt1', dayOfWeek: 'Monday', startTime: '09:00', endTime: '10:00', subjectId: 's1', facultyId: 'f1', section: '6A', room: 'LH-101', status: 'COMPLETED' },
   { id: 'tt2', dayOfWeek: 'Monday', startTime: '10:00', endTime: '11:00', subjectId: 's2', facultyId: 'f2', section: '6A', room: 'LH-101', status: 'COMPLETED' },
   { id: 'tt3', dayOfWeek: 'Monday', startTime: '11:15', endTime: '12:15', subjectId: 's3', facultyId: 'f1', section: '6A', room: 'LAB-2', status: 'UPCOMING' },
+  { id: 'tt4', dayOfWeek: 'Monday', startTime: '12:15', endTime: '13:15', subjectId: 's4', facultyId: 'f2', section: '6A', room: 'LH-102', status: 'UPCOMING' },
+  { id: 'tt5', dayOfWeek: 'Monday', startTime: '14:00', endTime: '15:00', subjectId: 's5', facultyId: 'f1', section: '6A', room: 'LH-103', status: 'UPCOMING' },
+  { id: 'tt6', dayOfWeek: 'Monday', startTime: '15:00', endTime: '16:00', subjectId: 's1', facultyId: 'f2', section: '6A', room: 'LH-101', status: 'UPCOMING' },
+  // Tuesday
+  { id: 'tt7', dayOfWeek: 'Tuesday', startTime: '09:00', endTime: '10:00', subjectId: 's4', facultyId: 'f1', section: '6A', room: 'LH-102', status: 'UPCOMING' },
+  { id: 'tt8', dayOfWeek: 'Tuesday', startTime: '10:00', endTime: '11:00', subjectId: 's5', facultyId: 'f2', section: '6A', room: 'LH-102', status: 'UPCOMING' },
+  { id: 'tt9', dayOfWeek: 'Tuesday', startTime: '11:15', endTime: '12:15', subjectId: 's1', facultyId: 'f1', section: '6A', room: 'LH-101', status: 'UPCOMING' },
+  // Wednesday
+  { id: 'tt10', dayOfWeek: 'Wednesday', startTime: '09:00', endTime: '10:00', subjectId: 's3', facultyId: 'f2', section: '6A', room: 'LAB-2', status: 'UPCOMING' },
+  { id: 'tt11', dayOfWeek: 'Wednesday', startTime: '10:00', endTime: '11:00', subjectId: 's2', facultyId: 'f1', section: '6A', room: 'LH-101', status: 'UPCOMING' },
 ];
 
 // Student Stats (Specific to Student View)

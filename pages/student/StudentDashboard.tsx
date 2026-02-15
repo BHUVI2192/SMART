@@ -20,7 +20,9 @@ interface TimetableItem {
   status: string;
 }
 
-const TIMETABLE_STORAGE_KEY = 'ams_timetable';
+const TIMETABLE_STORAGE_KEY = 'ams_timetable_v2';
+const STATS_STORAGE_KEY = 'ams_stats_v2';
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // SVG Progress Ring
 const ProgressRing: React.FC<{ percentage: number; size?: number; strokeWidth?: number; color: string }> = ({
@@ -54,7 +56,7 @@ const ProgressRing: React.FC<{ percentage: number; size?: number; strokeWidth?: 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const navigate = useNavigate();
   const apiReady = isApiConfigured();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [overallPercentage, setOverallPercentage] = useState(0);
   const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
@@ -62,77 +64,152 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const [activeClassName, setActiveClassName] = useState('');
   const [activeClassTime, setActiveClassTime] = useState('');
   const [activeClassRoom, setActiveClassRoom] = useState('');
+  const [selectedDay, setSelectedDay] = useState(DAYS_OF_WEEK[new Date().getDay() - 1] || 'Monday');
+  const [timetableCache, setTimetableCache] = useState<Record<string, TimetableItem[]>>({});
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    // Immediate local load for instant UI feedback
+    fallbackToLocal(selectedDay, true);
+
+    // Initial load for everything in background
+    const initialLoad = async () => {
+      await Promise.all([
+        loadStats(),
+        loadTimetable(selectedDay)
+      ]);
+    };
+    initialLoad();
+
+    // Stats periodic refresh (long interval)
+    const statsInterval = setInterval(loadStats, 60000);
+    return () => clearInterval(statsInterval);
   }, []);
 
-  const loadData = async () => {
+  useEffect(() => {
+    // Timetable-only refresh when day changes
+    const dayChangeLoad = async () => {
+      // Immediate local load for fast UI feedback if not in cache
+      if (!timetableCache[selectedDay]) {
+        fallbackToLocal(selectedDay, false); // false = don't reset stats
+      }
+      await loadTimetable(selectedDay);
+    };
+
+    dayChangeLoad();
+
+    // Timetable periodic refresh for current day
+    const ttInterval = setInterval(() => loadTimetable(selectedDay), 30000);
+    return () => clearInterval(ttInterval);
+  }, [selectedDay]);
+
+  const loadStats = async () => {
     if (apiReady) {
       try {
         const stats = await getStudentStats(authUser?.usn || authUser?.id || '');
         setSubjectStats(stats.stats);
         setOverallPercentage(stats.overall || 0);
+        // Persist real data
+        localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+        fallbackToLocal(undefined, true);
+      }
+    } else {
+      fallbackToLocal(undefined, true);
+    }
+  };
 
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const today = days[new Date().getDay()];
-        const ttResult = await apiGet('getTimetable', { day: today });
+  const loadTimetable = async (day: string) => {
+    // Fast path: cache check
+    if (timetableCache[day]) {
+      setTimetable(timetableCache[day]);
+    }
+
+    if (apiReady) {
+      try {
+        const ttResult = await apiGet('getTimetable', { day });
 
         if (ttResult.success) {
           const items: TimetableItem[] = ttResult.timetable.map((t: any) => ({
             id: t.id, subjectName: t.subjectName || t.subjectCode,
             startTime: t.startTime, endTime: t.endTime, room: t.room, status: t.status,
           }));
+
           setTimetable(items);
+          setTimetableCache(prev => ({ ...prev, [day]: items }));
+          // Persist current day timetable
+          localStorage.setItem(`${TIMETABLE_STORAGE_KEY}_${day}`, JSON.stringify(items));
+
           const active = items.find(t => t.status === 'ONGOING');
           if (active) {
             setHasActiveClass(true);
             setActiveClassName(active.subjectName);
             setActiveClassTime(`${active.startTime} - ${active.endTime}`);
             setActiveClassRoom(active.room);
-          } else { setHasActiveClass(false); }
+          } else if (day === DAYS_OF_WEEK[new Date().getDay() - 1]) {
+            setHasActiveClass(false);
+          }
         }
       } catch (err) {
-        console.error('Failed to load data:', err);
-        fallbackToLocal();
+        console.error('Failed to load timetable:', err);
+        if (!timetableCache[day]) fallbackToLocal(day, false);
       }
-    } else { fallbackToLocal(); }
-    setLoading(false);
+    } else {
+      if (!timetableCache[day]) fallbackToLocal(day, false);
+    }
   };
 
-  const fallbackToLocal = () => {
-    setSubjectStats(STUDENT_SUBJECT_STATS.map(s => ({
-      subjectCode: s.subjectCode, subjectName: s.subjectName,
-      totalClasses: s.totalClasses, attendedClasses: s.attendedClasses, percentage: s.percentage,
-    })));
-    setOverallPercentage(88);
-    const storedData = localStorage.getItem(TIMETABLE_STORAGE_KEY);
-    const entries: TimetableEntry[] = storedData ? JSON.parse(storedData) : TODAY_TIMETABLE;
-    setTimetable(entries.map(e => ({
-      id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
-      startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
-    })));
-    const active = entries.find(t => t.status === 'ONGOING');
-    if (active) {
-      setHasActiveClass(true);
-      setActiveClassName(SUBJECTS.find(s => s.id === active.subjectId)?.name || '');
-      setActiveClassTime(`${active.startTime} - ${active.endTime}`);
-      setActiveClassRoom(active.room);
+  const fallbackToLocal = (day?: string, updateStats: boolean = true) => {
+    if (updateStats) {
+      const storedStats = localStorage.getItem(STATS_STORAGE_KEY);
+      if (storedStats) {
+        const parsed = JSON.parse(storedStats);
+        setSubjectStats(parsed.stats);
+        setOverallPercentage(parsed.overall);
+      } else {
+        // Only if absolutely NO history, show 0 instead of random 88%
+        setSubjectStats([]);
+        setOverallPercentage(0);
+      }
+    }
+
+    const targetDay = day || selectedDay;
+    const storedTT = localStorage.getItem(`${TIMETABLE_STORAGE_KEY}_${targetDay}`);
+
+    if (storedTT) {
+      const items = JSON.parse(storedTT);
+      setTimetable(items);
+      setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+    } else {
+      // Use original today's timetable as a LAST resort for fallback
+      const allEntries: TimetableEntry[] = TODAY_TIMETABLE;
+      const entries = allEntries.filter(e => e.dayOfWeek === targetDay);
+      const items = entries.map(e => ({
+        id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
+        startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
+      }));
+      setTimetable(items);
+      setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+    }
+
+    // Active class check for current day
+    if (targetDay === DAYS_OF_WEEK[new Date().getDay() - 1]) {
+      const storedTT = localStorage.getItem(`${TIMETABLE_STORAGE_KEY}_${targetDay}`);
+      const items = storedTT ? JSON.parse(storedTT) : [];
+      const active = items.find((t: any) => t.status === 'ONGOING');
+      if (active) {
+        setHasActiveClass(true);
+        setActiveClassName(active.subjectName);
+        setActiveClassTime(`${active.startTime} - ${active.endTime}`);
+        setActiveClassRoom(active.room);
+      } else {
+        setHasActiveClass(false);
+      }
     }
   };
 
   const isGood = overallPercentage >= 85;
   const ringColor = isGood ? 'var(--primary)' : 'var(--warning)';
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 sm:space-y-8 animate-fade-in">
@@ -249,17 +326,35 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         </div>
 
         {/* Timeline */}
-        <div className="candy-card p-6 sm:p-8">
-          <div className="flex items-center space-x-3 mb-8">
-            <div className="w-2 h-6 rounded-full bg-indigo-400" />
-            <h3 className="text-sm font-black text-slate-900 tracking-tight">Today's Timeline</h3>
+        <div className="candy-card p-6 sm:p-8 flex flex-col max-h-[600px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 flex-shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-6 rounded-full bg-indigo-400" />
+              <h3 className="text-sm font-black text-slate-900 tracking-tight">Weekly Timetable</h3>
+            </div>
+
+            {/* Day Selection Chips */}
+            <div className="flex items-center space-x-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar scrollbar-hide">
+              {DAYS_OF_WEEK.map(day => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 ${selectedDay === day
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105'
+                    : 'bg-slate-50 text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-md'
+                    }`}
+                >
+                  {day.substring(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="relative ml-4 space-y-10">
-            {/* Vertical line - Candy thread style */}
-            <div className="absolute left-[7px] top-2 bottom-2 w-1 bg-slate-100 rounded-full" />
+          <div className="relative ml-4 space-y-10 overflow-y-auto pr-6 custom-scrollbar flex-1">
+            {/* Vertical line - Candy thread style - Adjusted to be inside scrollable area or handle scrolling */}
+            <div className="absolute left-[7px] top-2 bottom-4 w-1 bg-slate-100 rounded-full" />
 
             {timetable.map((cls) => (
-              <div key={cls.id} className="relative pl-10 group">
+              <div key={cls.id} className="relative pl-10 group pb-2">
                 <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-4 border-white shadow-md z-10 transition-all duration-500 group-hover:scale-150 ${cls.status === 'COMPLETED' ? 'bg-slate-300' :
                   cls.status === 'ONGOING' ? 'bg-indigo-500 animate-pulse-glow' : 'bg-emerald-400'
                   }`} />
