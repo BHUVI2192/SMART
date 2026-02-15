@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD
-import { PlayCircle, Clock, MapPin, Plus, CheckCircle, Loader2, Wifi, WifiOff, BookOpen, Users, Zap } from 'lucide-react';
-import LoadingScreen from '../../components/LoadingScreen';
-=======
 import { PlayCircle, Clock, MapPin, Plus, CheckCircle, Loader2, Wifi, WifiOff, BookOpen, Users, Zap, XCircle, ArrowRightLeft, AlertTriangle, AlertCircle } from 'lucide-react';
->>>>>>> 412e712 (feat: enhance dashboard notifications, improve whatsapp sharing flow, and format student timetable times)
+import LoadingScreen from '../../components/LoadingScreen';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured } from '../../services/api';
 import { apiGet, apiPost } from '../../services/api';
@@ -270,20 +266,11 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
   const completed = timetable.filter(t => t.status === 'COMPLETED').length;
   const ongoing = timetable.filter(t => t.status === 'ONGOING').length;
 
-<<<<<<< HEAD
-  if (loading) {
-    return <LoadingScreen />;
-=======
   // Stats calculation
   const totalClasses = timetable.length;
 
-  if (loading && timetable.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-      </div>
-    );
->>>>>>> 412e712 (feat: enhance dashboard notifications, improve whatsapp sharing flow, and format student timetable times)
+  if (loading) {
+    return <LoadingScreen />;
   }
 
   return (
@@ -330,15 +317,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
             )}
           </p>
         </div>
-<<<<<<< HEAD
-        <button
-          onClick={() => navigate('/faculty/add-class')}
-          className="gradient-primary text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 flex items-center justify-center transition-all duration-300 transform hover:-translate-y-0.5 text-sm tap-squish"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Extra Class
-        </button>
-=======
         <div className="flex items-center space-x-2">
           <button
             onClick={() => navigate('/faculty/add-class')}
@@ -355,8 +333,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
             <AlertCircle className="w-5 h-5" />
           </button>
         </div>
->>>>>>> 412e712 (feat: enhance dashboard notifications, improve whatsapp sharing flow, and format student timetable times)
-      </div>
+      </div >
 
       {
         showNotifications && authUser && (
@@ -392,23 +369,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
       </div>
 
       {/* Class Cards */}
-<<<<<<< HEAD
-      {timetable.length === 0 ? (
-        <div className="candy-card p-12 text-center">
-          <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-lg font-semibold text-slate-400">No classes scheduled</p>
-          <p className="text-sm text-slate-400 mt-1">Click "Add Extra Class" to add one</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
-          {timetable.map((session) => (
-            <div key={session.id} className={`candy-card p-5 relative overflow-hidden ${session.status === 'ONGOING' ? 'ring-2 ring-indigo-400/30 border-indigo-200' : ''
-              }`}>
-              {/* Status Accent */}
-              <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${session.status === 'ONGOING' ? 'bg-indigo-500' :
-                session.status === 'COMPLETED' ? 'bg-slate-300' : 'bg-emerald-400'
-                }`} />
-=======
       {
         timetable.length === 0 ? (
           <div className="glass-card p-12 text-center">
@@ -422,7 +382,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
               const expired = isClassExpired(session);
               const isCompleted = session.status === 'COMPLETED';
               const isOngoing = session.status === 'ONGOING';
->>>>>>> 412e712 (feat: enhance dashboard notifications, improve whatsapp sharing flow, and format student timetable times)
 
               return (
                 <div key={session.id} className={`glass-card p-5 relative overflow-hidden transition-all duration-300 ${isOngoing ? 'ring-2 ring-indigo-400/30 border-indigo-200' :
@@ -454,36 +413,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
                     </div>
                   </div>
 
-<<<<<<< HEAD
-              {session.status !== 'COMPLETED' ? (
-                <button
-                  onClick={() => handleStartSession(session)}
-                  disabled={starting === session.id}
-                  className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 tap-squish ${session.status === 'ONGOING'
-                    ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
-                    : 'gradient-primary text-white shadow-md shadow-blue-500/20'
-                    } disabled:opacity-50 disabled:transform-none`}
-                >
-                  {starting === session.id ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> Starting...</>
-                  ) : (
-                    <>
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      {session.status === 'ONGOING' ? 'Resume Session' : 'Generate QR & Start'}
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button className="w-full flex items-center justify-center py-2.5 rounded-xl font-medium text-sm bg-slate-100 text-slate-400 cursor-not-allowed">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Completed
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-=======
                   <div className="flex items-center space-x-4 mb-4 ml-3 text-xs text-slate-500">
                     <div className="flex items-center">
                       <Clock className="w-3.5 h-3.5 mr-1 text-slate-400" />
@@ -552,8 +481,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
           </div>
         )
       }
->>>>>>> 412e712 (feat: enhance dashboard notifications, improve whatsapp sharing flow, and format student timetable times)
-    </div>
+    </div >
   );
 };
 
