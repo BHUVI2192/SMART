@@ -67,31 +67,60 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const [timetableCache, setTimetableCache] = useState<Record<string, TimetableItem[]>>({});
 
   useEffect(() => {
-    // Immediate local load for fast UI feedback
-    if (!timetableCache[selectedDay]) {
-      fallbackToLocal(selectedDay);
-    }
+    // Initial load for everything
+    const initialLoad = async () => {
+      await loadStats();
+      await loadTimetable(selectedDay);
+      setLoading(false);
+    };
+    initialLoad();
 
-    loadData(selectedDay);
-    const interval = setInterval(() => loadData(selectedDay), 30000); // 30s instead of 10s to reduce unnecessary calls
-    return () => clearInterval(interval);
+    // Stats periodic refresh (long interval)
+    const statsInterval = setInterval(loadStats, 60000);
+    return () => clearInterval(statsInterval);
+  }, []);
+
+  useEffect(() => {
+    // Timetable-only refresh when day changes
+    const dayChangeLoad = async () => {
+      // Immediate local load for fast UI feedback if not in cache
+      if (!timetableCache[selectedDay]) {
+        fallbackToLocal(selectedDay, false); // false = don't reset stats
+      }
+      await loadTimetable(selectedDay);
+    };
+
+    dayChangeLoad();
+
+    // Timetable periodic refresh for current day
+    const ttInterval = setInterval(() => loadTimetable(selectedDay), 30000);
+    return () => clearInterval(ttInterval);
   }, [selectedDay]);
 
-  const loadData = async (day?: string) => {
-    const targetDay = day || selectedDay;
-
-    // Fast path: if we have data in cache, show it but still fetch in bg
-    if (timetableCache[targetDay]) {
-      setTimetable(timetableCache[targetDay]);
-    }
-
+  const loadStats = async () => {
     if (apiReady) {
       try {
         const stats = await getStudentStats(authUser?.usn || authUser?.id || '');
         setSubjectStats(stats.stats);
         setOverallPercentage(stats.overall || 0);
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+        fallbackToLocal(undefined, true); // true = reset stats
+      }
+    } else {
+      fallbackToLocal(undefined, true);
+    }
+  };
 
-        const ttResult = await apiGet('getTimetable', { day: targetDay });
+  const loadTimetable = async (day: string) => {
+    // Fast path: if we have data in cache, show it
+    if (timetableCache[day]) {
+      setTimetable(timetableCache[day]);
+    }
+
+    if (apiReady) {
+      try {
+        const ttResult = await apiGet('getTimetable', { day });
 
         if (ttResult.success) {
           const items: TimetableItem[] = ttResult.timetable.map((t: any) => ({
@@ -100,7 +129,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
           }));
 
           setTimetable(items);
-          setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+          setTimetableCache(prev => ({ ...prev, [day]: items }));
 
           const active = items.find(t => t.status === 'ONGOING');
           if (active) {
@@ -108,24 +137,28 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
             setActiveClassName(active.subjectName);
             setActiveClassTime(`${active.startTime} - ${active.endTime}`);
             setActiveClassRoom(active.room);
-          } else { setHasActiveClass(false); }
+          } else if (day === DAYS_OF_WEEK[new Date().getDay() - 1]) {
+            setHasActiveClass(false);
+          }
         }
       } catch (err) {
-        console.error('Failed to load data:', err);
-        if (!timetableCache[targetDay]) fallbackToLocal(targetDay);
+        console.error('Failed to load timetable:', err);
+        if (!timetableCache[day]) fallbackToLocal(day, false);
       }
     } else {
-      if (!timetableCache[targetDay]) fallbackToLocal(targetDay);
+      if (!timetableCache[day]) fallbackToLocal(day, false);
     }
-    setLoading(false);
   };
 
-  const fallbackToLocal = (day?: string) => {
-    setSubjectStats(STUDENT_SUBJECT_STATS.map(s => ({
-      subjectCode: s.subjectCode, subjectName: s.subjectName,
-      totalClasses: s.totalClasses, attendedClasses: s.attendedClasses, percentage: s.percentage,
-    })));
-    setOverallPercentage(88);
+  const fallbackToLocal = (day?: string, updateStats: boolean = true) => {
+    if (updateStats) {
+      setSubjectStats(STUDENT_SUBJECT_STATS.map(s => ({
+        subjectCode: s.subjectCode, subjectName: s.subjectName,
+        totalClasses: s.totalClasses, attendedClasses: s.attendedClasses, percentage: s.percentage,
+      })));
+      setOverallPercentage(88);
+    }
+
     const storedData = localStorage.getItem(TIMETABLE_STORAGE_KEY);
     const targetDay = day || selectedDay;
     const allEntries: TimetableEntry[] = storedData ? JSON.parse(storedData) : TODAY_TIMETABLE;
@@ -136,12 +169,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
     }));
     setTimetable(items);
     setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
-    const active = entries.find(t => t.status === 'ONGOING');
-    if (active) {
-      setHasActiveClass(true);
-      setActiveClassName(SUBJECTS.find(s => s.id === active.subjectId)?.name || '');
-      setActiveClassTime(`${active.startTime} - ${active.endTime}`);
-      setActiveClassRoom(active.room);
+
+    // Only check for active class if we're looking at today
+    if (targetDay === DAYS_OF_WEEK[new Date().getDay() - 1]) {
+      const active = entries.find(t => t.status === 'ONGOING');
+      if (active) {
+        setHasActiveClass(true);
+        setActiveClassName(SUBJECTS.find(s => s.id === active.subjectId)?.name || '');
+        setActiveClassTime(`${active.startTime} - ${active.endTime}`);
+        setActiveClassRoom(active.room);
+      } else {
+        setHasActiveClass(false);
+      }
     }
   };
 
