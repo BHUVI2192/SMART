@@ -35,6 +35,7 @@ export async function createSession(data: {
     endTime?: string;
     lat?: number;
     lng?: number;
+    semester?: number;
 }): Promise<{ sessionId: string; token: string }> {
     const result = await apiPost('createSession', data);
     if (!result.success) throw new Error(result.error);

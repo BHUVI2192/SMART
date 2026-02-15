@@ -12,6 +12,7 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import FacultyRecords from './pages/faculty/FacultyRecords';
 import AddClass from './pages/faculty/AddClass';
+import SwapClass from './pages/faculty/SwapClass';
 import ForgotPassword from './pages/ForgotPassword';
 import ChangePassword from './pages/ChangePassword';
 import { User } from './types';
@@ -120,6 +121,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute user={user} allowedRoles={['FACULTY']}>
               <AddClass authUser={authUser} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faculty/swap-class"
+          element={
+            <ProtectedRoute user={user} allowedRoles={['FACULTY']}>
+              <SwapClass authUser={authUser} />
             </ProtectedRoute>
           }
         />

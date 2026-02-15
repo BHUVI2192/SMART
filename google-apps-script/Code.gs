@@ -3,7 +3,7 @@
  * Google Apps Script Backend (acts as REST API for the React frontend)
  * 
  * SETUP:
- * 1. Create a Google Sheet with these tabs: Users, Sessions, Attendance, Subjects, Timetable, Rooms
+ * 1. Create a Google Sheet with these tabs: Users, Sessions, Attendance, Subjects, Timetable, Rooms, Notifications
  * 2. Copy the Sheet ID from the URL (the long string between /d/ and /edit)
  * 3. Paste it in SHEET_ID below
  * 4. Deploy this script as a Web App: Deploy > New Deployment > Web App > "Anyone" access
@@ -75,10 +75,16 @@ function doGet(e) {
         return handleGetStudentHistory(e.parameter);
       case 'getAllStudents':
         return handleGetAllStudents();
+      case 'getStudentsForSection':
+        return handleGetStudentsForSection(e.parameter);
       case 'getFacultyRecords':
         return handleGetFacultyRecords(e.parameter);
       case 'getSubjects':
         return handleGetSubjects(e.parameter);
+      case 'getSwappableClasses':
+        return handleGetSwappableClasses(e.parameter);
+      case 'getNotifications':
+        return handleGetNotifications(e.parameter);
       case 'forgotPassword':
         return handleForgotPassword(e.parameter);
       case 'seedData':
@@ -110,10 +116,18 @@ function doPost(e) {
         return handleEndSession(body);
       case 'markAttendance':
         return handleMarkAttendance(body);
+      case 'markManualAttendance':
+        return handleMarkManualAttendance(body);
       case 'addClass':
         return handleAddClass(body);
       case 'changePassword':
         return handleChangePassword(body);
+      case 'cancelClass':
+        return handleCancelClass(body);
+      case 'swapClass':
+        return handleSwapClass(body); // Updated logic
+      case 'markNotificationRead':
+        return handleMarkNotificationRead(body);
       default:
         return jsonResponse({ success: false, error: 'Unknown POST action: ' + action });
     }
@@ -340,6 +354,242 @@ function handleEndSession(body) {
 }
 
 // ============================================================
+// FACULTY ACTIONS (CANCEL / SWAP)
+// ============================================================
+
+function handleGetSwappableClasses(params) {
+  const { ttId } = params;
+  const sheet = getSheet('Timetable');
+  const timetable = sheetToJSON(sheet);
+  
+  // Find the source class
+  const sourceClass = timetable.find(t => String(t.ID) === String(ttId));
+  if (!sourceClass) {
+    return jsonResponse({ success: false, error: 'Class not found' });
+  }
+
+  const { Day, Section, Semester, FacultyID } = sourceClass;
+
+  // Find all other classes for the same section + semester on the same day
+  // Exclude the current class itself
+  const swappable = timetable.filter(t => 
+    t.Day === Day &&
+    String(t.Section) === String(Section) &&
+    // Check semester if it exists in data (using flexible check)
+    (Semester ? String(t.Semester) === String(Semester) : true) &&
+    String(t.ID) !== String(ttId) &&
+    t.Status !== 'CANCELLED' // Don't swap with cancelled classes
+  );
+
+  return jsonResponse({
+    success: true,
+    classes: swappable.map(c => ({
+      id: c.ID,
+      subjectCode: c.SubjectCode,
+      subjectName: c.SubjectName,
+      startTime: c.StartTime,
+      endTime: c.EndTime,
+      facultyId: c.FacultyID,
+      room: c.Room
+    }))
+  });
+}
+
+function handleSwapClass(body) {
+  // body: { sourceTTId, targetTTId, initiatorId }
+  const sheet = getSheet('Timetable');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('ID');
+  
+  // Column Indices
+  const dayCol = headers.indexOf('Day');
+  const startCol = headers.indexOf('StartTime');
+  const endCol = headers.indexOf('EndTime');
+  const subCol = headers.indexOf('SubjectCode');
+  const subNameCol = headers.indexOf('SubjectName');
+  const facCol = headers.indexOf('FacultyID');
+  const secCol = headers.indexOf('Section');
+
+  let sourceRowIndex = -1;
+  let targetRowIndex = -1;
+
+  // Find rows
+  for (let i = 1; i < data.length; i++) {
+    const rowId = String(data[i][idCol]);
+    if (rowId === String(body.sourceTTId)) sourceRowIndex = i + 1;
+    if (rowId === String(body.targetTTId)) targetRowIndex = i + 1;
+  }
+
+  if (sourceRowIndex === -1 || targetRowIndex === -1) {
+    return jsonResponse({ success: false, error: 'One or both classes not found' });
+  }
+
+  // Get current values
+  const sourceStart = sheet.getRange(sourceRowIndex, startCol + 1).getValue();
+  const sourceEnd = sheet.getRange(sourceRowIndex, endCol + 1).getValue();
+
+  const targetStart = sheet.getRange(targetRowIndex, startCol + 1).getValue();
+  const targetEnd = sheet.getRange(targetRowIndex, endCol + 1).getValue();
+
+  const sourceSub = sheet.getRange(sourceRowIndex, subNameCol + 1).getValue() || sheet.getRange(sourceRowIndex, subCol + 1).getValue();
+  const targetSub = sheet.getRange(targetRowIndex, subNameCol + 1).getValue() || sheet.getRange(targetRowIndex, subCol + 1).getValue();
+
+  const sourceFacId = sheet.getRange(sourceRowIndex, facCol + 1).getValue();
+  const targetFacId = sheet.getRange(targetRowIndex, facCol + 1).getValue();
+  const section = sheet.getRange(sourceRowIndex, secCol + 1).getValue();
+
+  // Perform Swap (Exchange Times)
+  sheet.getRange(sourceRowIndex, startCol + 1).setValue(targetStart);
+  sheet.getRange(sourceRowIndex, endCol + 1).setValue(targetEnd);
+
+  sheet.getRange(targetRowIndex, startCol + 1).setValue(sourceStart);
+  sheet.getRange(targetRowIndex, endCol + 1).setValue(sourceEnd);
+
+  // Send Notifications
+  const msgBody = `Timetable Update: Classes for ${sourceSub} and ${targetSub} have been swapped. ${sourceSub} is now at ${targetStart}, and ${targetSub} is at ${sourceStart}.`;
+  
+  // 1. Notify Students
+  notifySection(section, 'Class Swapped: ' + sourceSub + ' <> ' + targetSub, msgBody);
+  
+  // 2. Notify Target Faculty (if different from initiator)
+  if (String(targetFacId) !== String(body.initiatorId)) {
+    createNotification(targetFacId, 'Class Swapped Request', `Your class ${targetSub} has been swapped with ${sourceSub} by faculty ${body.initiatorId}.`);
+    // Try email too
+    const targetEmail = getUserEmail(targetFacId);
+    if (targetEmail) {
+      try {
+        GmailApp.sendEmail(targetEmail, 'Class Swapped Notification', `Your class ${targetSub} has been swapped with ${sourceSub}. New time: ${sourceStart}.`);
+      } catch(e) { console.error(e); }
+    }
+  }
+
+  return jsonResponse({ success: true, message: 'Classes swapped successfully' });
+}
+
+function handleCancelClass(body) {
+  const sheet = getSheet('Timetable');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('ID');
+
+  let found = false;
+  let subjectName = '';
+  let section = '';
+  let facultyId = '';
+
+  // Delete the row
+   for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(body.ttId)) {
+      subjectName = data[i][headers.indexOf('SubjectName')] || data[i][headers.indexOf('SubjectCode')];
+      section = data[i][headers.indexOf('Section')];
+      facultyId = data[i][headers.indexOf('FacultyID')];
+      sheet.deleteRow(i + 1);
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) return jsonResponse({ success: false, error: 'Class not found' });
+
+  // Send Notifications
+  const msg = `The class for ${subjectName} has been cancelled.`;
+  notifySection(section, 'Class Cancelled: ' + subjectName, msg);
+  
+  // Create system notification for faculty history (optional)
+  createNotification(facultyId, 'Class Cancelled', `You cancelled ${subjectName}.`);
+
+  return jsonResponse({ success: true });
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+function createNotification(recipientId, title, message) {
+  const sheet = getSheet('Notifications');
+  if (!sheet) return; // Should exist if seeded
+  
+  sheet.appendRow([
+    generateId(),
+    recipientId,
+    title,
+    message,
+    new Date().toISOString(),
+    'UNREAD'
+  ]);
+}
+
+function notifySection(section, subject, message) {
+    if (!section) return;
+    try {
+        const sheet = getSheet('Users');
+        const users = sheetToJSON(sheet);
+        // Find students in this section
+        const students = users.filter(u => u.Role === 'STUDENT' && String(u.Section) === String(section));
+        
+        // Log internal notifications for each student (for Notification Center)
+        students.forEach(s => {
+          createNotification(s.USN, subject, message);
+        });
+
+        // EMAIL REMOVED AS PER REQUIREMENT
+        // const emails = students.map(s => s.Email).filter(e => e).join(',');
+        // if (emails) {
+        //      GmailApp.sendEmail(emails, subject, message);
+        // }
+    } catch (e) {
+        console.error("Failed to send notification: " + e.toString());
+    }
+}
+
+function handleGetNotifications(params) {
+  const sheet = getSheet('Notifications');
+  if (!sheet) return jsonResponse({ success: true, notifications: [] });
+
+  const raw = sheetToJSON(sheet);
+  // Filter by RecipientID
+  const myNotes = raw.filter(n => String(n.RecipientID) === String(params.userId));
+  
+  // Sort by date desc
+  myNotes.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
+
+  return jsonResponse({
+    success: true,
+    notifications: myNotes.map(n => ({
+      id: n.ID,
+      title: n.Title,
+      message: n.Message,
+      timestamp: n.Timestamp,
+      read: n.ReadStatus === 'READ'
+    }))
+  });
+}
+
+function handleMarkNotificationRead(body) {
+  const sheet = getSheet('Notifications');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol = headers.indexOf('ID');
+  const readCol = headers.indexOf('ReadStatus');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(body.id)) {
+      sheet.getRange(i + 1, readCol + 1).setValue('READ');
+      return jsonResponse({ success: true });
+    }
+  }
+  return jsonResponse({ success: false });
+}
+
+function getUserEmail(userId) {
+  const sheet = getSheet('Users');
+  const users = sheetToJSON(sheet);
+  const u = users.find(user => user.USN === userId || user.Email === userId);
+  return u ? u.Email : null;
+}
+
+// ============================================================
 // ATTENDANCE
 // ============================================================
 
@@ -366,7 +616,7 @@ function handleMarkAttendance(body) {
   const duplicate = records.find(r => r.USN === body.usn && r.SessionID === body.sessionId);
 
   if (duplicate) {
-    return jsonResponse({ success: false, error: 'You have already marked attendance for this session', code: 'DUPLICATE' });
+    return jsonResponse({ success: false, error: 'You have already marked attendance for this session. Status: ' + (duplicate.VerifyStatus || 'PRESENT'), code: 'DUPLICATE' });
   }
 
   // 4. GPS geofencing check (server-side validation)
@@ -411,6 +661,39 @@ function handleMarkAttendance(body) {
     message: 'Attendance marked successfully',
     subjectName: session.SubjectName
   });
+}
+
+function handleMarkManualAttendance(body) {
+    // body: { sessionId, usn, studentName, status, reason, facultyId }
+    const sessSheet = getSheet('Sessions');
+    const sessions = sheetToJSON(sessSheet);
+    const session = sessions.find(s => s.SessionID === body.sessionId);
+    if (!session) return jsonResponse({ success: false, error: 'Session not found' });
+
+    const attSheet = getSheet('Attendance');
+    const records = sheetToJSON(attSheet);
+    
+    // Check duplicate
+    const duplicate = records.find(r => r.USN === body.usn && r.SessionID === body.sessionId);
+    if (duplicate) {
+         // Update existing? For now, just error or skip
+         return jsonResponse({ success: false, error: 'Attendance already marked for this user' });
+    }
+
+    const now = new Date();
+    attSheet.appendRow([
+        body.usn,
+        body.studentName,
+        body.sessionId,
+        session.SubjectCode || '',
+        session.SubjectName || '',
+        now.toISOString(),
+        '', // No GPS
+        '', // No GPS
+        'MANUAL_PRESENT'
+    ]);
+    
+    return jsonResponse({ success: true });
 }
 
 function handleGetAttendanceLogs(params) {
@@ -560,6 +843,30 @@ function handleGetAllStudents() {
   });
 }
 
+function handleGetStudentsForSection(params) {
+   const { semester, section } = params;
+   const sheet = getSheet('Users');
+   const users = sheetToJSON(sheet);
+   
+   // Flexible string comparison
+   const students = users.filter(u => 
+       u.Role === 'STUDENT' && 
+       String(u.Section).toLowerCase() === String(section).toLowerCase() && 
+       (String(u.Semester) === String(semester) || !semester) // Optional Semester check
+   );
+
+   return jsonResponse({
+       success: true,
+       students: students.map(s => ({
+           usn: s.USN,
+           name: s.Name,
+           email: s.Email,
+           section: s.Section,
+           semester: s.Semester
+       }))
+   });
+}
+
 // ============================================================
 // TIMETABLE
 // ============================================================
@@ -621,6 +928,7 @@ function handleGetTimetable(params) {
       facultyId: t.FacultyID,
       section: t.Section,
       room: t.Room,
+      semester: t.Semester, // Added semester
       status: activeSession ? 'ONGOING' : (t.Status || 'UPCOMING'),
       sessionId: activeSession ? activeSession.SessionID : null
     };
@@ -762,8 +1070,6 @@ function getDayName() {
   return days[new Date().getDay()];
 }
 
-// ... existing code ...
-
 // ============================================================
 // SEED DATA — SAFELY ADDS MISSING TABS ONLY
 // ============================================================
@@ -797,18 +1103,16 @@ function seedData() {
 
   // --- Attendance Tab ---
   createSheetIfNotExists('Attendance', ['USN', 'StudentName', 'SessionID', 'SubjectCode', 'SubjectName', 'Timestamp', 'GPSLat', 'GPSLng', 'VerifyStatus']);
-
+  
   // --- Timetable Tab ---
   createSheetIfNotExists('Timetable', ['ID', 'Day', 'StartTime', 'EndTime', 'SubjectCode', 'SubjectName', 'FacultyID', 'Section', 'Room', 'Status']);
 
   // --- Rooms Tab ---
-  if (createSheetIfNotExists('Rooms', ['RoomName', 'Latitude', 'Longitude', 'RadiusMeters'])) {
-     const sheet = ss.getSheetByName('Rooms');
-     sheet.appendRow(['LH-101', 13.962073, 75.507188, 100]);
-  }
+  createSheetIfNotExists('Rooms', ['RoomName', 'Latitude', 'Longitude', 'RadiusMeters']);
 
   // --- LoginLogs Tab ---
   createSheetIfNotExists('LoginLogs', ['UserID', 'Role', 'Timestamp', 'UserAgent']);
 
-  Logger.log('✅ Checked all sheets. Did NOT delete any existing data.');
+  // --- Notifications Tab ---
+  createSheetIfNotExists('Notifications', ['ID', 'RecipientID', 'Title', 'Message', 'Timestamp', 'ReadStatus']);
 }

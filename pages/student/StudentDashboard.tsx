@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle, QrCode, Loader2, Wifi, WifiOff, TrendingUp, Clock, MapPin } from 'lucide-react';
+import { AlertTriangle, CheckCircle, QrCode, Loader2, Wifi, WifiOff, TrendingUp, Clock, MapPin, AlertCircle } from 'lucide-react';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured, apiGet } from '../../services/api';
 import { getStudentStats, SubjectStat } from '../../services/attendance';
+import { getNotifications } from '../../services/faculty';
+import { formatTime } from '../../utils';
 import { STUDENT_SUBJECT_STATS, TODAY_TIMETABLE, SUBJECTS } from '../../data';
 import { TimetableEntry } from '../../types';
 
@@ -66,6 +68,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const [activeClassRoom, setActiveClassRoom] = useState('');
   const [selectedDay, setSelectedDay] = useState(DAYS_OF_WEEK[new Date().getDay() - 1] || 'Monday');
   const [timetableCache, setTimetableCache] = useState<Record<string, TimetableItem[]>>({});
+  const [latestNotification, setLatestNotification] = useState<any>(null);
 
   useEffect(() => {
     // Immediate local load for instant UI feedback
@@ -75,13 +78,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
     const initialLoad = async () => {
       await Promise.all([
         loadStats(),
-        loadTimetable(selectedDay)
+        loadTimetable(selectedDay),
+        loadNotifications()
       ]);
     };
     initialLoad();
 
     // Stats periodic refresh (long interval)
-    const statsInterval = setInterval(loadStats, 60000);
+    const statsInterval = setInterval(() => {
+      loadStats();
+      loadNotifications();
+    }, 60000);
     return () => clearInterval(statsInterval);
   }, []);
 
@@ -132,7 +139,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         if (ttResult.success) {
           const items: TimetableItem[] = ttResult.timetable.map((t: any) => ({
             id: t.id, subjectName: t.subjectName || t.subjectCode,
-            startTime: t.startTime, endTime: t.endTime, room: t.room, status: t.status,
+            startTime: formatTime(t.startTime), endTime: formatTime(t.endTime), room: t.room, status: t.status,
           }));
 
           setTimetable(items);
@@ -144,7 +151,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
           if (active) {
             setHasActiveClass(true);
             setActiveClassName(active.subjectName);
-            setActiveClassTime(`${active.startTime} - ${active.endTime}`);
+            setActiveClassTime(`${active.startTime} - ${active.endTime}`); // Already formatted
             setActiveClassRoom(active.room);
           } else if (day === DAYS_OF_WEEK[new Date().getDay() - 1]) {
             setHasActiveClass(false);
@@ -186,7 +193,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
       const entries = allEntries.filter(e => e.dayOfWeek === targetDay);
       const items = entries.map(e => ({
         id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
-        startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
+        startTime: formatTime(e.startTime), endTime: formatTime(e.endTime), room: e.room, status: e.status,
       }));
       setTimetable(items);
       setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
@@ -200,10 +207,23 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
       if (active) {
         setHasActiveClass(true);
         setActiveClassName(active.subjectName);
-        setActiveClassTime(`${active.startTime} - ${active.endTime}`);
+        setActiveClassTime(`${active.startTime} - ${active.endTime}`); // Already formatted in cache/fallback
         setActiveClassRoom(active.room);
       } else {
         setHasActiveClass(false);
+      }
+    }
+  };
+
+  const loadNotifications = async () => {
+    if (authUser && apiReady) {
+      try {
+        const notes = await getNotifications(authUser.id);
+        const unread = notes.filter((n: any) => !n.read);
+        if (unread.length > 0) setLatestNotification(unread[0]);
+        else setLatestNotification(null);
+      } catch (e) {
+        console.error('Error fetching notifications:', e);
       }
     }
   };
@@ -213,6 +233,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
 
   return (
     <div className="space-y-4 sm:space-y-8 animate-fade-in">
+      {/* Notification Banner */}
+      {latestNotification && (
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-4 text-white shadow-lg shadow-indigo-500/20 flex items-center justify-between animate-fade-in mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <AlertCircle className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">{latestNotification.title}</h3>
+              <p className="text-indigo-100 text-sm">{latestNotification.message}</p>
+              <p className="text-white/60 text-[10px] mt-1">{new Date(latestNotification.timestamp).toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Progress Ring Card */}
