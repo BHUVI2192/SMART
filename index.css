@@ -98,6 +98,17 @@ body {
   background: rgba(67, 97, 238, 0.3);
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
 /* ---------- Candy Utilities ---------- */
 .gradient-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);

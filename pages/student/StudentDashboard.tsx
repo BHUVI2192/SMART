@@ -21,6 +21,7 @@ interface TimetableItem {
 }
 
 const TIMETABLE_STORAGE_KEY = 'ams_timetable';
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // SVG Progress Ring
 const ProgressRing: React.FC<{ percentage: number; size?: number; strokeWidth?: number; color: string }> = ({
@@ -62,30 +63,45 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const [activeClassName, setActiveClassName] = useState('');
   const [activeClassTime, setActiveClassTime] = useState('');
   const [activeClassRoom, setActiveClassRoom] = useState('');
+  const [selectedDay, setSelectedDay] = useState(DAYS_OF_WEEK[new Date().getDay() - 1] || 'Monday');
+  const [timetableCache, setTimetableCache] = useState<Record<string, TimetableItem[]>>({});
 
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    // Immediate local load for fast UI feedback
+    if (!timetableCache[selectedDay]) {
+      fallbackToLocal(selectedDay);
+    }
 
-  const loadData = async () => {
+    loadData(selectedDay);
+    const interval = setInterval(() => loadData(selectedDay), 30000); // 30s instead of 10s to reduce unnecessary calls
+    return () => clearInterval(interval);
+  }, [selectedDay]);
+
+  const loadData = async (day?: string) => {
+    const targetDay = day || selectedDay;
+
+    // Fast path: if we have data in cache, show it but still fetch in bg
+    if (timetableCache[targetDay]) {
+      setTimetable(timetableCache[targetDay]);
+    }
+
     if (apiReady) {
       try {
         const stats = await getStudentStats(authUser?.usn || authUser?.id || '');
         setSubjectStats(stats.stats);
         setOverallPercentage(stats.overall || 0);
 
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const today = days[new Date().getDay()];
-        const ttResult = await apiGet('getTimetable', { day: today });
+        const ttResult = await apiGet('getTimetable', { day: targetDay });
 
         if (ttResult.success) {
           const items: TimetableItem[] = ttResult.timetable.map((t: any) => ({
             id: t.id, subjectName: t.subjectName || t.subjectCode,
             startTime: t.startTime, endTime: t.endTime, room: t.room, status: t.status,
           }));
+
           setTimetable(items);
+          setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+
           const active = items.find(t => t.status === 'ONGOING');
           if (active) {
             setHasActiveClass(true);
@@ -96,24 +112,30 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         }
       } catch (err) {
         console.error('Failed to load data:', err);
-        fallbackToLocal();
+        if (!timetableCache[targetDay]) fallbackToLocal(targetDay);
       }
-    } else { fallbackToLocal(); }
+    } else {
+      if (!timetableCache[targetDay]) fallbackToLocal(targetDay);
+    }
     setLoading(false);
   };
 
-  const fallbackToLocal = () => {
+  const fallbackToLocal = (day?: string) => {
     setSubjectStats(STUDENT_SUBJECT_STATS.map(s => ({
       subjectCode: s.subjectCode, subjectName: s.subjectName,
       totalClasses: s.totalClasses, attendedClasses: s.attendedClasses, percentage: s.percentage,
     })));
     setOverallPercentage(88);
     const storedData = localStorage.getItem(TIMETABLE_STORAGE_KEY);
-    const entries: TimetableEntry[] = storedData ? JSON.parse(storedData) : TODAY_TIMETABLE;
-    setTimetable(entries.map(e => ({
+    const targetDay = day || selectedDay;
+    const allEntries: TimetableEntry[] = storedData ? JSON.parse(storedData) : TODAY_TIMETABLE;
+    const entries = allEntries.filter(e => e.dayOfWeek === targetDay);
+    const items = entries.map(e => ({
       id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
       startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
-    })));
+    }));
+    setTimetable(items);
+    setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
     const active = entries.find(t => t.status === 'ONGOING');
     if (active) {
       setHasActiveClass(true);
@@ -249,10 +271,28 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         </div>
 
         {/* Timeline */}
-        <div className="candy-card p-6 sm:p-8 flex flex-col max-h-[500px]">
-          <div className="flex items-center space-x-3 mb-8 flex-shrink-0">
-            <div className="w-2 h-6 rounded-full bg-indigo-400" />
-            <h3 className="text-sm font-black text-slate-900 tracking-tight">Today's Timeline</h3>
+        <div className="candy-card p-6 sm:p-8 flex flex-col max-h-[600px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 flex-shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-6 rounded-full bg-indigo-400" />
+              <h3 className="text-sm font-black text-slate-900 tracking-tight">Weekly Timetable</h3>
+            </div>
+
+            {/* Day Selection Chips */}
+            <div className="flex items-center space-x-2 overflow-x-auto pb-2 sm:pb-0 custom-scrollbar scrollbar-hide">
+              {DAYS_OF_WEEK.map(day => (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 ${selectedDay === day
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105'
+                    : 'bg-slate-50 text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-md'
+                    }`}
+                >
+                  {day.substring(0, 3)}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="relative ml-4 space-y-10 overflow-y-auto pr-6 custom-scrollbar flex-1">
             {/* Vertical line - Candy thread style - Adjusted to be inside scrollable area or handle scrolling */}
