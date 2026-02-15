@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const appsScriptUrl = env.VITE_APPS_SCRIPT_URL || process.env.VITE_APPS_SCRIPT_URL || '';
   return {
     server: {
       port: 3000,
@@ -11,7 +12,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      'import.meta.env.VITE_APPS_SCRIPT_URL': JSON.stringify(env.VITE_APPS_SCRIPT_URL),
+      'import.meta.env.VITE_APPS_SCRIPT_URL': JSON.stringify(appsScriptUrl),
     },
     resolve: {
       alias: {
