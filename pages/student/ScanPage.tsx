@@ -188,7 +188,7 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
     buttonStyle?: string;
   }> = ({ icon, title, message, accent, buttonText, buttonAction, buttonStyle }) => (
     <div className="text-center w-full max-w-sm mx-auto animate-scale-in">
-      <div className={`glass-card p-8`}>
+      <div className={`glass-card p-6 sm:p-8`}>
         <div className={`w-16 h-16 rounded-2xl ${accent} flex items-center justify-center mx-auto mb-4`}>
           {icon}
         </div>
