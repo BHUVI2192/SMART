@@ -20,7 +20,8 @@ interface TimetableItem {
   status: string;
 }
 
-const TIMETABLE_STORAGE_KEY = 'ams_timetable';
+const TIMETABLE_STORAGE_KEY = 'ams_timetable_v2';
+const STATS_STORAGE_KEY = 'ams_stats_v2';
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // SVG Progress Ring
@@ -107,9 +108,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         const stats = await getStudentStats(authUser?.usn || authUser?.id || '');
         setSubjectStats(stats.stats);
         setOverallPercentage(stats.overall || 0);
+        // Persist real data
+        localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(stats));
       } catch (err) {
         console.error('Failed to load stats:', err);
-        fallbackToLocal(undefined, true); // true = reset stats
+        fallbackToLocal(undefined, true);
       }
     } else {
       fallbackToLocal(undefined, true);
@@ -117,7 +120,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   };
 
   const loadTimetable = async (day: string) => {
-    // Fast path: if we have data in cache, show it
+    // Fast path: cache check
     if (timetableCache[day]) {
       setTimetable(timetableCache[day]);
     }
@@ -134,6 +137,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
 
           setTimetable(items);
           setTimetableCache(prev => ({ ...prev, [day]: items }));
+          // Persist current day timetable
+          localStorage.setItem(`${TIMETABLE_STORAGE_KEY}_${day}`, JSON.stringify(items));
 
           const active = items.find(t => t.status === 'ONGOING');
           if (active) {
@@ -156,30 +161,45 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
 
   const fallbackToLocal = (day?: string, updateStats: boolean = true) => {
     if (updateStats) {
-      setSubjectStats(STUDENT_SUBJECT_STATS.map(s => ({
-        subjectCode: s.subjectCode, subjectName: s.subjectName,
-        totalClasses: s.totalClasses, attendedClasses: s.attendedClasses, percentage: s.percentage,
-      })));
-      setOverallPercentage(88);
+      const storedStats = localStorage.getItem(STATS_STORAGE_KEY);
+      if (storedStats) {
+        const parsed = JSON.parse(storedStats);
+        setSubjectStats(parsed.stats);
+        setOverallPercentage(parsed.overall);
+      } else {
+        // Only if absolutely NO history, show 0 instead of random 88%
+        setSubjectStats([]);
+        setOverallPercentage(0);
+      }
     }
 
-    const storedData = localStorage.getItem(TIMETABLE_STORAGE_KEY);
     const targetDay = day || selectedDay;
-    const allEntries: TimetableEntry[] = storedData ? JSON.parse(storedData) : TODAY_TIMETABLE;
-    const entries = allEntries.filter(e => e.dayOfWeek === targetDay);
-    const items = entries.map(e => ({
-      id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
-      startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
-    }));
-    setTimetable(items);
-    setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+    const storedTT = localStorage.getItem(`${TIMETABLE_STORAGE_KEY}_${targetDay}`);
 
-    // Only check for active class if we're looking at today
+    if (storedTT) {
+      const items = JSON.parse(storedTT);
+      setTimetable(items);
+      setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+    } else {
+      // Use original today's timetable as a LAST resort for fallback
+      const allEntries: TimetableEntry[] = TODAY_TIMETABLE;
+      const entries = allEntries.filter(e => e.dayOfWeek === targetDay);
+      const items = entries.map(e => ({
+        id: e.id, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || e.subjectId,
+        startTime: e.startTime, endTime: e.endTime, room: e.room, status: e.status,
+      }));
+      setTimetable(items);
+      setTimetableCache(prev => ({ ...prev, [targetDay]: items }));
+    }
+
+    // Active class check for current day
     if (targetDay === DAYS_OF_WEEK[new Date().getDay() - 1]) {
-      const active = entries.find(t => t.status === 'ONGOING');
+      const storedTT = localStorage.getItem(`${TIMETABLE_STORAGE_KEY}_${targetDay}`);
+      const items = storedTT ? JSON.parse(storedTT) : [];
+      const active = items.find((t: any) => t.status === 'ONGOING');
       if (active) {
         setHasActiveClass(true);
-        setActiveClassName(SUBJECTS.find(s => s.id === active.subjectId)?.name || '');
+        setActiveClassName(active.subjectName);
         setActiveClassTime(`${active.startTime} - ${active.endTime}`);
         setActiveClassRoom(active.room);
       } else {
