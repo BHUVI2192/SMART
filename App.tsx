@@ -11,6 +11,7 @@ import StudentHistory from './pages/student/StudentHistory';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import FacultyRecords from './pages/faculty/FacultyRecords';
+import AddClass from './pages/faculty/AddClass';
 import { User } from './types';
 import { getCurrentUser, toAppUser, AuthUser, logout as authLogout } from './services/auth';
 
@@ -103,6 +104,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute user={user} allowedRoles={['FACULTY']}>
               <FacultyRecords authUser={authUser} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/faculty/add-class"
+          element={
+            <ProtectedRoute user={user} allowedRoles={['FACULTY']}>
+              <AddClass authUser={authUser} />
             </ProtectedRoute>
           }
         />
