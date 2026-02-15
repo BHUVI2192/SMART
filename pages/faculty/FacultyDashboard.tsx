@@ -183,7 +183,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">
-            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {displayName.split(' ')[0]} 👋
+            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {displayName} 👋
           </h2>
           <p className="text-slate-500 text-sm mt-0.5 flex items-center">
             Here is your schedule for today

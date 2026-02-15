@@ -606,7 +606,8 @@ function handleGetSubjects(params) {
 
   let filtered = subjects;
   if (params.facultyId) {
-    filtered = subjects.filter(s => s.FacultyID === params.facultyId);
+    const targetId = String(params.facultyId).trim().toLowerCase();
+    filtered = subjects.filter(s => String(s.FacultyID).trim().toLowerCase() === targetId);
   }
 
   return jsonResponse({
