@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlayCircle, Clock, MapPin, Plus, CheckCircle, Loader2, Wifi, WifiOff, BookOpen, Users, Zap } from 'lucide-react';
+import LoadingScreen from '../../components/LoadingScreen';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured } from '../../services/api';
 import { apiGet, apiPost } from '../../services/api';
@@ -113,11 +114,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
   const upcoming = timetable.filter(t => t.status === 'UPCOMING').length;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -143,7 +140,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
         </div>
         <button
           onClick={() => navigate('/faculty/add-class')}
-          className="gradient-primary text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 flex items-center justify-center transition-all duration-300 transform hover:-translate-y-0.5 text-sm"
+          className="gradient-primary text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 flex items-center justify-center transition-all duration-300 transform hover:-translate-y-0.5 text-sm tap-squish"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Extra Class
@@ -151,19 +148,19 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 stagger-children">
         {[
           { label: 'Total', value: timetable.length, icon: BookOpen, gradient: 'from-indigo-500 to-blue-500', shadow: 'shadow-indigo-500/15' },
           { label: 'Completed', value: completed, icon: CheckCircle, gradient: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-500/15' },
           { label: 'Ongoing', value: ongoing, icon: Zap, gradient: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/15' },
         ].map((stat) => (
-          <div key={stat.label} className={`glass-card p-4 flex items-center space-x-3`}>
+          <div key={stat.label} className={`candy-card p-4 flex items-center space-x-3 transition-all hover:scale-[1.05]`}>
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-md ${stat.shadow} flex-shrink-0`}>
               <stat.icon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-              <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">{stat.value}</p>
+              <p className="text-[9px] sm:text-[11px] text-slate-400 font-black uppercase tracking-wider">{stat.label}</p>
             </div>
           </div>
         ))}
@@ -179,7 +176,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
 
       {/* Class Cards */}
       {timetable.length === 0 ? (
-        <div className="glass-card p-12 text-center">
+        <div className="candy-card p-12 text-center">
           <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <p className="text-lg font-semibold text-slate-400">No classes scheduled</p>
           <p className="text-sm text-slate-400 mt-1">Click "Add Extra Class" to add one</p>
@@ -187,7 +184,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
           {timetable.map((session) => (
-            <div key={session.id} className={`glass-card p-5 relative overflow-hidden ${session.status === 'ONGOING' ? 'ring-2 ring-indigo-400/30 border-indigo-200' : ''
+            <div key={session.id} className={`candy-card p-5 relative overflow-hidden ${session.status === 'ONGOING' ? 'ring-2 ring-indigo-400/30 border-indigo-200' : ''
               }`}>
               {/* Status Accent */}
               <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${session.status === 'ONGOING' ? 'bg-indigo-500' :
@@ -225,7 +222,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
                 <button
                   onClick={() => handleStartSession(session)}
                   disabled={starting === session.id}
-                  className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${session.status === 'ONGOING'
+                  className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 tap-squish ${session.status === 'ONGOING'
                     ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
                     : 'gradient-primary text-white shadow-md shadow-blue-500/20'
                     } disabled:opacity-50 disabled:transform-none`}

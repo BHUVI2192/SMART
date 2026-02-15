@@ -16,31 +16,37 @@ interface LayoutProps {
 const NavItem: React.FC<{ icon: any; label: string; isActive: boolean; onClick: () => void }> = ({ icon: Icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center w-full px-5 py-4 mb-2 text-sm font-bold rounded-full transition-all duration-500 group relative ${isActive
+    className={`flex items-center w-full px-5 py-4 mb-2 text-sm font-bold rounded-full transition-all duration-500 group relative tap-squish ${isActive
       ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
       : 'text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-500/5'
       }`}
   >
     {isActive && (
-      <div className="absolute left-1.5 w-1 h-6 bg-white rounded-full shadow-sm" />
+      <div className="absolute left-1.5 w-1 h-6 bg-white rounded-full shadow-sm animate-slide-right" />
     )}
     <div className={`p-2 rounded-2xl mr-4 transition-all duration-500 ${isActive ? 'bg-white/20 shadow-inner' : 'bg-slate-50 group-hover:bg-indigo-50 group-hover:scale-110'
       }`}>
-      <Icon className="w-[20px] h-[20px]" />
+      <Icon className={`w-[20px] h-[20px] transition-transform duration-500 ${isActive ? 'scale-110 rotate-3' : 'group-hover:rotate-6'}`} />
     </div>
     <span className="flex-1 text-left tracking-tight">{label}</span>
+    {isActive && <ChevronRight className="w-4 h-4 opacity-50 animate-slide-right" />}
   </button>
 );
 
 const MobileNavItem: React.FC<{ icon: any; label: string; isActive: boolean; onClick: () => void }> = ({ icon: Icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center justify-center py-1 px-1 flex-1 transition-all duration-500 ${isActive ? 'scale-110' : ''}`}
+    className={`flex flex-col items-center justify-center py-1 px-1 flex-1 transition-all duration-500 tap-squish ${isActive ? 'scale-105' : ''}`}
   >
-    <div className={`p-2.5 rounded-2xl mb-0.5 transition-all duration-500 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400'}`}>
-      <Icon className="w-5 h-5" />
+    <div className="relative">
+      <div className={`p-2.5 rounded-2xl mb-0.5 transition-all duration-500 ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 -translate-y-1' : 'text-slate-400 opacity-70'}`}>
+        <Icon className={`w-5 h-5 transition-transform duration-500 ${isActive ? 'scale-110' : ''}`} />
+      </div>
+      {isActive && (
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-600 rounded-full animate-fade-in" />
+      )}
     </div>
-    <span className={`text-[9px] font-black tracking-tighter uppercase ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>{label}</span>
+    <span className={`text-[9px] font-black tracking-tighter uppercase transition-colors duration-300 ${isActive ? 'text-indigo-600' : 'text-slate-400 opacity-60'}`}>{label}</span>
   </button>
 );
 
@@ -52,6 +58,20 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
   if (!user) return <>{children}</>;
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleNavigate = (path: string) => {
+    if (path === location.pathname) return;
+
+    // Use View Transitions API if available
+    if ((document as any).startViewTransition) {
+      (document as any).startViewTransition(() => {
+        navigate(path);
+      });
+    } else {
+      navigate(path);
+    }
+    setIsSidebarOpen(false);
+  };
 
   const getNavItems = () => {
     switch (user.role) {
@@ -103,11 +123,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
   const badge = getRoleBadge();
 
   return (
-    <div className="min-h-screen flex bg-[#f8faff]">
+    <div className="min-h-screen flex bg-[#f8faff] overflow-x-hidden">
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-40 lg:hidden animate-fade-in"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden animate-fade-in"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -115,7 +135,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
       {/* Desktop Sidebar - Restored Candymorphism */}
       <aside
         className={`fixed lg:sticky top-0 left-0 z-50 w-[280px] h-screen candy-sidebar flex flex-col transform transition-transform duration-500 ease-out lg:transform-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 lg:m-4 lg:h-[calc(100vh-32px)] lg:rounded-[40px] shadow-2xl shadow-indigo-100/50`}
+          } lg:translate-x-0 lg:m-4 lg:h-[calc(100vh-32px)] lg:rounded-[40px] shadow-2xl shadow-indigo-100/30`}
       >
         {/* Logo */}
         <div className="h-20 flex items-center px-6 border-b border-slate-100 mt-2">
@@ -135,9 +155,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
           </button>
         </div>
 
-        {/* User Card - Soft Glass */}
         <div className="px-4 py-6">
-          <div className="flex items-center p-4 rounded-[28px] bg-white/40 border border-white shadow-sm backdrop-blur-md">
+          <div className="flex items-center p-4 rounded-[28px] bg-slate-50 border border-slate-100 shadow-sm transition-transform hover:scale-[1.02] cursor-default">
             <div className="w-12 h-12 rounded-2xl bg-indigo-500 flex items-center justify-center text-white font-black text-base shadow-xl shadow-indigo-500/20 flex-shrink-0 animate-bop">
               {user.avatarInitials}
             </div>
@@ -151,7 +170,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
         </div>
 
         {/* Nav Items */}
-        <nav className="px-4 flex-1 overflow-y-auto">
+        <nav className="px-4 flex-1 overflow-y-auto scrollbar-hide">
           <p className="text-[10px] text-slate-400 font-black tracking-[0.2em] uppercase px-5 mb-4">Portal</p>
           {navItems.map((item) => (
             <NavItem
@@ -159,21 +178,15 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
               icon={item.icon}
               label={item.label}
               isActive={isActive(item.path)}
-              onClick={() => {
-                navigate(item.path);
-                setIsSidebarOpen(false);
-              }}
+              onClick={() => handleNavigate(item.path)}
             />
           ))}
           <div className="border-t border-slate-50 my-2" />
           <NavItem
             icon={ShieldCheck}
-            label="Change Password"
+            label="Security"
             isActive={isActive('/change-password')}
-            onClick={() => {
-              navigate('/change-password');
-              setIsSidebarOpen(false);
-            }}
+            onClick={() => handleNavigate('/change-password')}
           />
         </nav>
 
@@ -181,7 +194,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
         <div className="p-4 mt-auto">
           <button
             onClick={onLogout}
-            className="flex items-center w-full px-6 py-4 text-sm font-black text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all duration-500 group"
+            className="flex items-center w-full px-6 py-4 text-sm font-black text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-full transition-all duration-500 group tap-squish"
           >
             <div className="p-2 rounded-2xl bg-slate-50 mr-4 group-hover:bg-red-100 group-hover:scale-110 transition-all">
               <LogOut className="w-5 h-5" />
@@ -198,11 +211,11 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
           <div className="flex items-center">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden w-12 h-12 flex items-center justify-center bg-white text-slate-700 shadow-xl shadow-slate-200 rounded-2xl mr-4 active:scale-90 transition-all"
+              className="lg:hidden w-12 h-12 flex items-center justify-center bg-white text-slate-700 shadow-xl shadow-slate-200 rounded-2xl mr-4 active:scale-90 transition-all tap-squish"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div>
+            <div className="animate-slide-right">
               <h2 className="text-xl lg:text-3xl font-black text-slate-900 tracking-tight leading-tight">
                 {getPageTitle()}
               </h2>
@@ -210,25 +223,28 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
             </div>
           </div>
 
-          <div className="flex items-center group cursor-pointer">
+          <div className="flex items-center group cursor-pointer tap-squish">
             <div className="text-right mr-4 hidden md:block">
               <p className="text-sm font-black text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">{user.name}</p>
               <p className="text-[11px] text-slate-400 font-bold">{user.email}</p>
             </div>
-            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-white flex items-center justify-center text-indigo-600 font-black text-sm shadow-xl shadow-slate-200 group-hover:scale-110 transition-all duration-500 border border-slate-50">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-white flex items-center justify-center text-indigo-600 font-black text-sm shadow-xl shadow-slate-200 group-hover:scale-110 group-hover:shadow-indigo-500/10 transition-all duration-500 border border-slate-50">
               {user.avatarInitials}
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 px-4 lg:px-10 mt-4 pb-28 lg:pb-10">
+        <main
+          key={location.pathname}
+          className="flex-1 px-4 lg:px-10 mt-4 pb-28 lg:pb-10 transition-all duration-500"
+        >
           {children}
         </main>
       </div>
 
       {/* Mobile Bottom Nav - Candy Pill style */}
-      <div className="fixed bottom-4 left-4 right-4 z-50 lg:hidden px-3 py-2 bg-white/90 backdrop-blur-2xl rounded-[32px] shadow-2xl shadow-indigo-900/10 border border-slate-100">
+      <div className="fixed bottom-4 left-4 right-4 z-50 lg:hidden px-3 py-2 bg-white/90 backdrop-blur-xl rounded-[32px] shadow-2xl shadow-indigo-900/10 border border-white">
         <div className="flex items-center justify-around">
           {navItems.map((item) => (
             <MobileNavItem
@@ -236,7 +252,7 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
               icon={item.icon}
               label={item.label}
               isActive={isActive(item.path)}
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigate(item.path)}
             />
           ))}
           <MobileNavItem

@@ -32,7 +32,7 @@ const AdminDashboard = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 stagger-children">
         {stats.map((stat, index) => (
-          <div key={index} className="glass-card p-4 sm:p-5 flex items-center space-x-3">
+          <div key={index} className="candy-card p-4 sm:p-5 flex items-center space-x-3">
             <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-md ${stat.shadow} flex-shrink-0`}>
               <stat.icon className="w-5 h-5 text-white" />
             </div>
@@ -46,7 +46,7 @@ const AdminDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Low Attendance */}
-        <div className="glass-card overflow-hidden">
+        <div className="candy-card overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Chart */}
-        <div className="glass-card p-5">
+        <div className="candy-card p-5">
           <div className="flex items-center space-x-2 mb-5">
             <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-indigo-600" />

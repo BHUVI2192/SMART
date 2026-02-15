@@ -9,12 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jsqr": "1.4.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "0.294.0",
+    "qrcode": "1.5.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "6.28.0",
-    "qrcode": "1.5.3",
-    "jsqr": "1.4.0"
+    "react-router-dom": "6.28.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

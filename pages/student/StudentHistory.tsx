@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Loader2, CalendarDays, CheckCircle, XCircle } from 'lucide-react';
+import LoadingScreen from '../../components/LoadingScreen';
 import { useNavigate } from 'react-router-dom';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured } from '../../services/api';
@@ -48,7 +49,7 @@ const StudentHistory: React.FC<StudentHistoryProps> = ({ authUser }) => {
     const absentCount = history.filter(h => h.status === 'ABSENT').length;
 
     if (loading) {
-        return <div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>;
+        return <LoadingScreen />;
     }
 
     return (
