@@ -56,7 +56,6 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
   }, []);
 
   const startLiveCamera = async () => {
-    setStage('CAMERA');
     setCameraError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -65,14 +64,19 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setCameraActive(true);
-        // Start frame-by-frame QR scanning
-        scanIntervalRef.current = window.setInterval(() => { scanFrame(); }, 250);
+        // Wait for user interaction to play on some mobile browsers
+        try {
+          await videoRef.current.play();
+          setCameraActive(true);
+          scanIntervalRef.current = window.setInterval(() => { scanFrame(); }, 250);
+        } catch (playErr) {
+          console.error('Play error:', playErr);
+          setCameraError('Tap to start camera preview');
+        }
       }
     } catch (err: any) {
       console.error('Camera error:', err);
-      setCameraError('Camera access denied or unavailable. Use the upload option instead.');
+      setCameraError('Camera access denied. Please check permissions or use upload.');
       setCameraActive(false);
     }
   };
@@ -97,7 +101,11 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
     }
   };
 
-  const startCamera = () => { startLiveCamera(); };
+  const startCamera = () => {
+    setStage('CAMERA');
+    // Don't auto-start immediately to allow UI to render and user to tap "Allow"
+    setTimeout(() => startLiveCamera(), 500);
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -235,36 +243,49 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
           {stage === 'CAMERA' && (
             <div className="w-full space-y-4 text-center animate-slide-up">
               {/* Live Camera View */}
-              {cameraActive && (
-                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-black border border-white/10">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                  {/* Scanning overlay */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-48 h-48 border-2 border-indigo-400/50 rounded-2xl relative">
-                      <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-indigo-400 rounded-tl-lg" />
-                      <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-indigo-400 rounded-tr-lg" />
-                      <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-indigo-400 rounded-bl-lg" />
-                      <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-indigo-400 rounded-br-lg" />
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 left-0 right-0 text-center">
-                    <span className="inline-flex items-center bg-black/60 backdrop-blur-sm text-[10px] text-white/80 px-3 py-1 rounded-full">
-                      <Video className="w-3 h-3 mr-1 text-red-400 animate-pulse" /> Scanning...
-                    </span>
-                  </div>
-                </div>
-              )}
+              <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-black border border-white/10">
+                <video ref={videoRef} playsInline muted className={`w-full h-full object-cover ${cameraActive ? 'opacity-100' : 'opacity-0'}`} />
 
-              {cameraError && (
+                {/* Scanning overlay */}
+                {cameraActive && (
+                  <>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-48 h-48 border-2 border-indigo-400/50 rounded-2xl relative">
+                        <div className="absolute top-0 left-0 w-6 h-6 border-t-3 border-l-3 border-indigo-400 rounded-tl-lg" />
+                        <div className="absolute top-0 right-0 w-6 h-6 border-t-3 border-r-3 border-indigo-400 rounded-tr-lg" />
+                        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-3 border-l-3 border-indigo-400 rounded-bl-lg" />
+                        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-3 border-r-3 border-indigo-400 rounded-br-lg" />
+                      </div>
+                    </div>
+                    <div className="absolute bottom-3 left-0 right-0 text-center">
+                      <span className="inline-flex items-center bg-black/60 backdrop-blur-sm text-[10px] text-white/80 px-3 py-1 rounded-full">
+                        <Video className="w-3 h-3 mr-1 text-red-400 animate-pulse" /> Scanning...
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {!cameraActive && !cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-slate-400 animate-spin mb-2" />
+                    <p className="text-sm text-slate-400">Starting camera...</p>
+                  </div>
+                )}
+
+                {/* Manual Start Button if auto-play fails */}
+                {!cameraActive && cameraError === 'Tap to start camera preview' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20">
+                    <button onClick={() => { videoRef.current?.play().then(() => setCameraActive(true)); }} className="gradient-primary px-6 py-2 rounded-full text-white text-sm font-bold">
+                      Tap to Start Camera
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {cameraError && cameraError !== 'Tap to start camera preview' && (
                 <div className="bg-red-500/15 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-xs">
                   {cameraError}
-                </div>
-              )}
-
-              {!cameraActive && !cameraError && (
-                <div className="w-full h-48 border-2 border-dashed border-white/15 rounded-2xl flex flex-col items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-slate-400 animate-spin mb-2" />
-                  <p className="text-sm text-slate-400">Starting camera...</p>
+                  <button onClick={startLiveCamera} className="block mt-2 text-xs underline text-red-200">Retry</button>
                 </div>
               )}
 
