@@ -607,16 +607,20 @@ function handleGetSubjects(params) {
   let filtered = subjects;
   if (params.facultyId) {
     const targetId = String(params.facultyId).trim().toLowerCase();
-    filtered = subjects.filter(s => String(s.FacultyID).trim().toLowerCase() === targetId);
+    filtered = subjects.filter(s => {
+      // Check multiple possible header names for robustness
+      const rawId = s.FacultyID || s['Faculty ID'] || s.FacultyId || s.FID || ''; 
+      return String(rawId).trim().toLowerCase() === targetId;
+    });
   }
 
   return jsonResponse({
     success: true,
     subjects: filtered.map(s => ({
-      code: s.Code,
-      name: s.Name,
-      semester: s.Semester,
-      facultyId: s.FacultyID
+      code: s.Code || s['Subject Code'] || s.SubjectCode || '',
+      name: s.Name || s['Subject Name'] || s.SubjectName || '',
+      semester: s.Semester || s.Sem || '',
+      facultyId: s.FacultyID || s['Faculty ID'] || ''
     }))
   });
 }
