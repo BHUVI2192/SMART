@@ -59,20 +59,11 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
         if (result.success && result.subjects.length > 0) {
           setSubjects(result.subjects.map((s: any) => ({ code: s.code, name: s.name })));
           setNewClassSubject(result.subjects[0].code);
+        } else {
+          setSubjects([]);
+          setNewClassSubject('');
         }
       } catch (err) { console.error('Failed to load subjects:', err); }
-    }
-    // Fallback if no API subjects loaded
-    if (subjects.length === 0) {
-      const fallback = [
-        { code: '18CS61', name: 'System Software' },
-        { code: '18CS62', name: 'Computer Graphics' },
-        { code: '18CS63', name: 'Web Technology' },
-        { code: '18CS64', name: 'Data Mining' },
-        { code: '18CS65', name: 'Cloud Computing' },
-      ];
-      setSubjects(fallback);
-      setNewClassSubject(fallback[0].code);
     }
   };
 
