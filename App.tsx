@@ -56,7 +56,7 @@ const App: React.FC = () => {
   return (
     <Layout user={user} onLogout={handleLogout}>
       <Routes>
-        <Route path="/" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />} />
+        <Route path="/" element={!user || !user.role ? <Login onLogin={handleLogin} /> : <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/change-password" element={
           <ProtectedRoute user={user} allowedRoles={['ADMIN', 'FACULTY', 'STUDENT']}>

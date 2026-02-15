@@ -63,10 +63,10 @@ export function getCurrentUser(): AuthUser | null {
 
 export function toAppUser(authUser: AuthUser): User {
     return {
-        id: authUser.id,
-        name: authUser.name,
-        role: authUser.role,
-        email: authUser.email,
-        avatarInitials: authUser.avatarInitials,
+        id: authUser.id || '',
+        name: authUser.name || 'User',
+        role: authUser.role || 'STUDENT',
+        email: authUser.email || '',
+        avatarInitials: authUser.avatarInitials || '?',
     };
 }
