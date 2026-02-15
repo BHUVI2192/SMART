@@ -55,7 +55,7 @@ const ProgressRing: React.FC<{ percentage: number; size?: number; strokeWidth?: 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const navigate = useNavigate();
   const apiReady = isApiConfigured();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [overallPercentage, setOverallPercentage] = useState(0);
   const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
   const [timetable, setTimetable] = useState<TimetableItem[]>([]);
@@ -67,11 +67,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   const [timetableCache, setTimetableCache] = useState<Record<string, TimetableItem[]>>({});
 
   useEffect(() => {
-    // Initial load for everything
+    // Immediate local load for instant UI feedback
+    fallbackToLocal(selectedDay, true);
+
+    // Initial load for everything in background
     const initialLoad = async () => {
-      await loadStats();
-      await loadTimetable(selectedDay);
-      setLoading(false);
+      await Promise.all([
+        loadStats(),
+        loadTimetable(selectedDay)
+      ]);
     };
     initialLoad();
 
@@ -186,14 +190,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
 
   const isGood = overallPercentage >= 85;
   const ringColor = isGood ? 'var(--primary)' : 'var(--warning)';
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 sm:space-y-8 animate-fade-in">
