@@ -208,11 +208,28 @@ function handleForgotPassword(params) {
     const subject = 'Password Recovery - AMS Attendance System';
     const body = `Hello ${user.Name},\n\nYour current password for the AMS Attendance System is: ${user.Password}\n\nPlease log in and change your password for security.\n\nBest regards,\nAMS System Admin`;
     
-    MailApp.sendEmail(email, subject, body);
+    // Switch to GmailApp as it's more robust for Web Apps
+    GmailApp.sendEmail(email, subject, body);
     return jsonResponse({ success: true, message: 'Password reset email sent' });
   } catch (e) {
-    return jsonResponse({ success: false, error: 'Failed to send email: ' + e.toString() });
+    const errorMsg = e.toString();
+    if (errorMsg.includes('permission')) {
+      return jsonResponse({ 
+        success: false, 
+        error: 'Email permission not granted. Please open the Script Editor, run any function manually once to authorize, and then re-deploy as a New Version.' 
+      });
+    }
+    return jsonResponse({ success: false, error: 'Failed to send email: ' + errorMsg });
   }
+}
+
+/**
+ * AUTHORIZATION HELPER:
+ * Run this function manually once in the Apps Script editor (press "Run")
+ * to trigger the permission popup for Gmail/Email.
+ */
+function authorizeEmail() {
+  GmailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'Auth Test', 'Permissions granted!');
 }
 
 // ============================================================
