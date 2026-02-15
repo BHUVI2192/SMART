@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlayCircle, Clock, MapPin, Plus, CheckCircle, X, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { PlayCircle, Clock, MapPin, Plus, CheckCircle, X, Loader2, Wifi, WifiOff, BookOpen, Users, Zap } from 'lucide-react';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured } from '../../services/api';
 import { apiGet, apiPost } from '../../services/api';
@@ -36,38 +36,52 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
   const [starting, setStarting] = useState<string | null>(null);
   const apiReady = isApiConfigured();
 
-  // Form State
-  const [newClassSubject, setNewClassSubject] = useState('18CS61');
+  const [newClassSubject, setNewClassSubject] = useState('');
   const [newClassStart, setNewClassStart] = useState('');
   const [newClassEnd, setNewClassEnd] = useState('');
   const [newClassRoom, setNewClassRoom] = useState('');
-  const [subjects, setSubjects] = useState<{ code: string; name: string }[]>([
-    { code: '18CS61', name: 'System Software' },
-    { code: '18CS62', name: 'Computer Graphics' },
-    { code: '18CS63', name: 'Web Technology' },
-    { code: '18CS64', name: 'Data Mining' },
-    { code: '18CS65', name: 'Cloud Computing' },
-  ]);
+  const [subjects, setSubjects] = useState<{ code: string; name: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [addError, setAddError] = useState('');
 
-  // Load timetable
   useEffect(() => {
     loadTimetable();
-    const interval = setInterval(loadTimetable, 10000); // Refresh every 10s
+    loadSubjects();
+    const interval = setInterval(loadTimetable, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const loadSubjects = async () => {
+    if (apiReady) {
+      try {
+        const result = await apiGet('getSubjects', { facultyId: authUser?.id || '' });
+        if (result.success && result.subjects.length > 0) {
+          setSubjects(result.subjects.map((s: any) => ({ code: s.code, name: s.name })));
+          setNewClassSubject(result.subjects[0].code);
+        }
+      } catch (err) { console.error('Failed to load subjects:', err); }
+    }
+    // Fallback if no API subjects loaded
+    if (subjects.length === 0) {
+      const fallback = [
+        { code: '18CS61', name: 'System Software' },
+        { code: '18CS62', name: 'Computer Graphics' },
+        { code: '18CS63', name: 'Web Technology' },
+        { code: '18CS64', name: 'Data Mining' },
+        { code: '18CS65', name: 'Cloud Computing' },
+      ];
+      setSubjects(fallback);
+      setNewClassSubject(fallback[0].code);
+    }
+  };
 
   const loadTimetable = async () => {
     if (apiReady) {
       try {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const today = days[new Date().getDay()];
-        const result = await apiGet('getTimetable', {
-          facultyId: authUser?.id || '',
-          day: today,
-        });
-        if (result.success) {
-          setTimetable(result.timetable);
-        }
+        const result = await apiGet('getTimetable', { facultyId: authUser?.id || '', day: today });
+        if (result.success) setTimetable(result.timetable);
       } catch (err) {
         console.error('Failed to load timetable:', err);
         fallbackToLocal();
@@ -83,317 +97,264 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
     if (storedData) {
       const entries: TimetableEntry[] = JSON.parse(storedData);
       setTimetable(entries.map(e => ({
-        id: e.id,
-        day: e.dayOfWeek,
-        startTime: e.startTime,
-        endTime: e.endTime,
-        subjectCode: e.subjectId,
-        subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || '',
-        facultyId: e.facultyId,
-        section: e.section,
-        room: e.room,
-        status: e.status,
-        sessionId: null,
+        id: e.id, day: e.dayOfWeek, startTime: e.startTime, endTime: e.endTime,
+        subjectCode: e.subjectId, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || '',
+        facultyId: e.facultyId, section: e.section, room: e.room, status: e.status, sessionId: null,
       })));
     } else {
       setTimetable(TODAY_TIMETABLE.map(e => ({
-        id: e.id,
-        day: e.dayOfWeek,
-        startTime: e.startTime,
-        endTime: e.endTime,
-        subjectCode: e.subjectId,
-        subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || '',
-        facultyId: e.facultyId,
-        section: e.section,
-        room: e.room,
-        status: e.status,
-        sessionId: null,
+        id: e.id, day: e.dayOfWeek, startTime: e.startTime, endTime: e.endTime,
+        subjectCode: e.subjectId, subjectName: SUBJECTS.find(s => s.id === e.subjectId)?.name || '',
+        facultyId: e.facultyId, section: e.section, room: e.room, status: e.status, sessionId: null,
       })));
     }
   };
 
   const handleStartSession = async (item: TimetableItem) => {
-    if (item.sessionId) {
-      // Already has a session, navigate to it
-      navigate(`/faculty/session/${item.sessionId}`);
-      return;
-    }
-
+    if (item.sessionId) { navigate(`/faculty/session/${item.sessionId}`); return; }
     if (apiReady) {
       setStarting(item.id);
       try {
-        // Get room GPS coords
-        let lat = 12.9716;
-        let lng = 77.5946;
+        let lat = 12.9716, lng = 77.5946;
         try {
           const roomsResult = await apiGet('getRooms');
           if (roomsResult.success) {
             const room = roomsResult.rooms.find((r: any) => r.name === item.room);
-            if (room) {
-              lat = room.lat;
-              lng = room.lng;
-            }
+            if (room) { lat = room.lat; lng = room.lng; }
           }
         } catch { }
-
         const result = await createSession({
-          facultyId: authUser?.id || '',
-          subjectCode: item.subjectCode,
-          subjectName: item.subjectName,
-          room: item.room,
-          section: item.section,
-          endTime: item.endTime,
-          lat,
-          lng,
+          facultyId: authUser?.id || '', subjectCode: item.subjectCode, subjectName: item.subjectName,
+          room: item.room, section: item.section, endTime: item.endTime, lat, lng,
         });
         navigate(`/faculty/session/${result.sessionId}`);
       } catch (err) {
         console.error('Failed to create session:', err);
         alert('Failed to start session. Please try again.');
-      } finally {
-        setStarting(null);
-      }
+      } finally { setStarting(null); }
     } else {
-      // Demo mode - use local storage session
       navigate(`/faculty/session/${item.id}`);
     }
   };
 
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setAddError('');
     const subjectInfo = subjects.find(s => s.code === newClassSubject);
-
     if (apiReady) {
       try {
-        await apiPost('addClass', {
-          action: 'addClass',
-          startTime: newClassStart,
-          endTime: newClassEnd,
-          subjectCode: newClassSubject,
-          subjectName: subjectInfo?.name || '',
-          facultyId: authUser?.id || '',
-          section: '6A',
-          room: newClassRoom || 'LH-101',
+        const result = await apiPost('addClass', {
+          action: 'addClass', startTime: newClassStart, endTime: newClassEnd,
+          subjectCode: newClassSubject, subjectName: subjectInfo?.name || '',
+          facultyId: authUser?.id || '', section: '6A', room: newClassRoom || 'LH-101',
         });
+        if (!result.success) {
+          setAddError(result.error || 'Failed to add class');
+          setSubmitting(false);
+          return;
+        }
         loadTimetable();
-      } catch (err) {
-        console.error('Failed to add class:', err);
-      }
+      } catch (err) { console.error('Failed to add class:', err); }
     } else {
-      // Local fallback
-      const newEntry = {
-        id: `tt_new_${Date.now()}`,
-        day: 'Monday',
-        startTime: newClassStart,
-        endTime: newClassEnd,
-        subjectCode: newClassSubject,
-        subjectName: subjectInfo?.name || '',
-        facultyId: 'f1',
-        section: '6A',
-        room: newClassRoom || 'LH-101',
-        status: 'UPCOMING',
-        sessionId: null,
-      };
-      setTimetable(prev => [...prev, newEntry]);
+      setTimetable(prev => [...prev, {
+        id: `tt_new_${Date.now()}`, day: 'Monday', startTime: newClassStart, endTime: newClassEnd,
+        subjectCode: newClassSubject, subjectName: subjectInfo?.name || '', facultyId: 'f1',
+        section: '6A', room: newClassRoom || 'LH-101', status: 'UPCOMING', sessionId: null,
+      }]);
     }
-
+    setSubmitting(false);
     setIsModalOpen(false);
-    setNewClassStart('');
-    setNewClassEnd('');
-    setNewClassRoom('');
+    setNewClassStart(''); setNewClassEnd(''); setNewClassRoom('');
   };
 
   const displayName = authUser?.name || 'Professor';
-
-  const ClassCard: React.FC<{ session: TimetableItem }> = ({ session }) => (
-    <div className={`p-5 rounded-xl border border-gray-200 shadow-sm transition-all ${session.status === 'ONGOING' ? 'bg-blue-50 border-blue-200 ring-1 ring-blue-100' : 'bg-white'
-      }`}>
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <span className={`inline-block px-2 py-1 rounded text-xs font-bold mb-2 ${session.status === 'ONGOING' ? 'bg-emerald-100 text-emerald-800' :
-              session.status === 'COMPLETED' ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-800'
-            }`}>
-            {session.status}
-          </span>
-          <h3 className="text-lg font-bold text-gray-900">{session.subjectName || session.subjectCode}</h3>
-          <p className="text-sm text-gray-600">Section {session.section}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-lg font-bold text-gray-800">{session.startTime}</p>
-          <p className="text-xs text-gray-500 uppercase">Start Time</p>
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-4 mb-6 text-sm text-gray-500">
-        <div className="flex items-center">
-          <Clock className="w-4 h-4 mr-1" />
-          {session.endTime} End
-        </div>
-        <div className="flex items-center">
-          <MapPin className="w-4 h-4 mr-1" />
-          {session.room}
-        </div>
-      </div>
-
-      {session.status !== 'COMPLETED' ? (
-        <button
-          onClick={() => handleStartSession(session)}
-          disabled={starting === session.id}
-          className={`w-full flex items-center justify-center py-2.5 rounded-lg font-medium transition-colors ${session.status === 'ONGOING'
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'
-              : 'bg-blue-900 hover:bg-blue-800 text-white shadow-blue-200'
-            } shadow-md disabled:opacity-50`}
-        >
-          {starting === session.id ? (
-            <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Starting...</>
-          ) : (
-            <>
-              <PlayCircle className="w-5 h-5 mr-2" />
-              {session.status === 'ONGOING' ? 'Resume Session' : 'Generate QR & Start'}
-            </>
-          )}
-        </button>
-      ) : (
-        <button className="w-full flex items-center justify-center py-2.5 rounded-lg font-medium bg-gray-100 text-gray-500 cursor-not-allowed">
-          <CheckCircle className="w-5 h-5 mr-2" />
-          Class Completed
-        </button>
-      )}
-    </div>
-  );
+  const completed = timetable.filter(t => t.status === 'COMPLETED').length;
+  const ongoing = timetable.filter(t => t.status === 'ONGOING').length;
+  const upcoming = timetable.filter(t => t.status === 'UPCOMING').length;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 text-blue-900 animate-spin" />
+        <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 relative">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Good Morning, {displayName}</h2>
-          <p className="text-gray-500 flex items-center">
-            Here is your schedule for today.
+          <h2 className="text-2xl font-bold text-slate-900">
+            Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {displayName.split(' ')[0]} 👋
+          </h2>
+          <p className="text-slate-500 text-sm mt-0.5 flex items-center">
+            Here is your schedule for today
             {apiReady ? (
-              <span className="ml-2 inline-flex items-center text-xs text-emerald-600">
+              <span className="ml-2 inline-flex items-center text-[11px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-medium">
                 <Wifi className="w-3 h-3 mr-1" /> Live
               </span>
             ) : (
-              <span className="ml-2 inline-flex items-center text-xs text-amber-600">
-                <WifiOff className="w-3 h-3 mr-1" /> Offline Mode
+              <span className="ml-2 inline-flex items-center text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                <WifiOff className="w-3 h-3 mr-1" /> Offline
               </span>
             )}
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-900 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-blue-800 flex items-center justify-center"
+          className="gradient-primary text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 flex items-center justify-center transition-all duration-300 transform hover:-translate-y-0.5 text-sm"
         >
-          <Plus className="w-5 h-5 mr-2" />
+          <Plus className="w-4 h-4 mr-2" />
           Add Extra Class
         </button>
       </div>
 
-      <div className="flex space-x-3 mb-4">
-        <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center">
-          <span className="text-xs text-gray-500 font-medium uppercase">Total Classes</span>
-          <span className="text-lg font-bold text-blue-900">{timetable.length}</span>
-        </div>
-        <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center">
-          <span className="text-xs text-gray-500 font-medium uppercase">Completed</span>
-          <span className="text-lg font-bold text-emerald-600">{timetable.filter(t => t.status === 'COMPLETED').length}</span>
-        </div>
-        <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100 flex flex-col items-center">
-          <span className="text-xs text-gray-500 font-medium uppercase">Ongoing</span>
-          <span className="text-lg font-bold text-blue-600">{timetable.filter(t => t.status === 'ONGOING').length}</span>
-        </div>
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        {[
+          { label: 'Total', value: timetable.length, icon: BookOpen, gradient: 'from-indigo-500 to-blue-500', shadow: 'shadow-indigo-500/15' },
+          { label: 'Completed', value: completed, icon: CheckCircle, gradient: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-500/15' },
+          { label: 'Ongoing', value: ongoing, icon: Zap, gradient: 'from-amber-500 to-orange-500', shadow: 'shadow-amber-500/15' },
+        ].map((stat) => (
+          <div key={stat.label} className={`glass-card p-4 flex items-center space-x-3`}>
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-md ${stat.shadow} flex-shrink-0`}>
+              <stat.icon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+              <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wider">{stat.label}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2">Today's Timetable</h3>
+      {/* Section Header */}
+      <div className="flex items-center space-x-2">
+        <div className="w-1 h-5 rounded-full gradient-accent" />
+        <h3 className="text-base font-bold text-slate-800">Today's Timetable</h3>
+      </div>
 
+      {/* Class Cards */}
       {timetable.length === 0 ? (
-        <div className="bg-white rounded-xl p-12 text-center text-gray-400 border border-gray-200">
-          <p className="text-lg font-medium">No classes scheduled for today</p>
-          <p className="text-sm mt-1">Click "Add Extra Class" to add one</p>
+        <div className="glass-card p-12 text-center">
+          <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="text-lg font-semibold text-slate-400">No classes scheduled</p>
+          <p className="text-sm text-slate-400 mt-1">Click "Add Extra Class" to add one</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
           {timetable.map((session) => (
-            <ClassCard key={session.id} session={session} />
+            <div key={session.id} className={`glass-card p-5 relative overflow-hidden ${session.status === 'ONGOING' ? 'ring-2 ring-indigo-400/30 border-indigo-200' : ''
+              }`}>
+              {/* Status Accent */}
+              <div className={`absolute top-0 left-0 w-1 h-full rounded-r-full ${session.status === 'ONGOING' ? 'bg-indigo-500' :
+                session.status === 'COMPLETED' ? 'bg-slate-300' : 'bg-emerald-400'
+                }`} />
+
+              <div className="flex justify-between items-start mb-3 ml-3">
+                <div>
+                  <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider mb-2 ${session.status === 'ONGOING' ? 'bg-indigo-100 text-indigo-700' :
+                    session.status === 'COMPLETED' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'
+                    }`}>
+                    {session.status === 'ONGOING' && '● '}{session.status}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900">{session.subjectName || session.subjectCode}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Section {session.section}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-slate-800">{session.startTime}</p>
+                  <p className="text-[10px] text-slate-400 uppercase font-medium">Start</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 mb-4 ml-3 text-xs text-slate-500">
+                <div className="flex items-center">
+                  <Clock className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                  {session.endTime}
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                  {session.room}
+                </div>
+              </div>
+
+              {session.status !== 'COMPLETED' ? (
+                <button
+                  onClick={() => handleStartSession(session)}
+                  disabled={starting === session.id}
+                  className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${session.status === 'ONGOING'
+                    ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
+                    : 'gradient-primary text-white shadow-md shadow-blue-500/20'
+                    } disabled:opacity-50 disabled:transform-none`}
+                >
+                  {starting === session.id ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> Starting...</>
+                  ) : (
+                    <>
+                      <PlayCircle className="w-4 h-4 mr-2" />
+                      {session.status === 'ONGOING' ? 'Resume Session' : 'Generate QR & Start'}
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button className="w-full flex items-center justify-center py-2.5 rounded-xl font-medium text-sm bg-slate-100 text-slate-400 cursor-not-allowed">
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Completed
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
 
       {/* Add Class Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Add New Class</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-bold text-slate-900">Add New Class</h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddClass} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Subject</label>
                 <select
-                  className="w-full border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50 transition-all hover:border-slate-300"
                   value={newClassSubject}
                   onChange={(e) => setNewClassSubject(e.target.value)}
                 >
-                  {subjects.map(s => (
-                    <option key={s.code} value={s.code}>{s.name} ({s.code})</option>
-                  ))}
+                  {subjects.map(s => <option key={s.code} value={s.code}>{s.name} ({s.code})</option>)}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-                  <input
-                    type="time"
-                    required
-                    className="w-full border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                    value={newClassStart}
-                    onChange={(e) => setNewClassStart(e.target.value)}
-                  />
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Start</label>
+                  <input type="time" required className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassStart} onChange={(e) => setNewClassStart(e.target.value)} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                  <input
-                    type="time"
-                    required
-                    className="w-full border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                    value={newClassEnd}
-                    onChange={(e) => setNewClassEnd(e.target.value)}
-                  />
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">End</label>
+                  <input type="time" required className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassEnd} onChange={(e) => setNewClassEnd(e.target.value)} />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Room No</label>
-                <input
-                  type="text"
-                  placeholder="e.g. LH-202"
-                  className="w-full border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                  value={newClassRoom}
-                  onChange={(e) => setNewClassRoom(e.target.value)}
-                />
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Room</label>
+                <input type="text" placeholder="e.g. LH-202" className="w-full border border-slate-200 rounded-xl p-3 text-sm bg-slate-50/50" value={newClassRoom} onChange={(e) => setNewClassRoom(e.target.value)} />
               </div>
 
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-colors shadow-lg"
-                >
-                  Add to Schedule
-                </button>
-              </div>
+              {addError && (
+                <p className="text-xs text-red-500 font-medium bg-red-50 px-3 py-2 rounded-lg">{addError}</p>
+              )}
+              <button type="submit" disabled={submitting} className="w-full gradient-primary text-white py-3 rounded-xl font-bold text-sm hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-300 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                {submitting ? 'Adding...' : 'Add to Schedule'}
+              </button>
             </form>
           </div>
         </div>

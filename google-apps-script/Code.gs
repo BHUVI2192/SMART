@@ -77,6 +77,8 @@ function doGet(e) {
         return handleGetAllStudents();
       case 'getFacultyRecords':
         return handleGetFacultyRecords(e.parameter);
+      case 'getSubjects':
+        return handleGetSubjects(e.parameter);
       case 'seedData':
         seedData();
         return jsonResponse({ success: true, message: 'Seed data created successfully' });
@@ -521,11 +523,24 @@ function handleGetTimetable(params) {
 
 function handleAddClass(body) {
   const sheet = getSheet('Timetable');
-  const id = generateId();
+  const existing = sheetToJSON(sheet);
+  const day = body.day || getDayName();
 
+  // Duplicate check: same faculty + subject + start time + day
+  const duplicate = existing.find(t =>
+    t.FacultyID === body.facultyId &&
+    t.SubjectCode === body.subjectCode &&
+    t.StartTime === body.startTime &&
+    t.Day === day
+  );
+  if (duplicate) {
+    return jsonResponse({ success: false, error: 'This class already exists in the timetable', code: 'DUPLICATE' });
+  }
+
+  const id = generateId();
   sheet.appendRow([
     id,
-    body.day || getDayName(),
+    day,
     body.startTime,
     body.endTime,
     body.subjectCode,
@@ -554,6 +569,26 @@ function handleGetRooms() {
       lat: parseFloat(r.Latitude) || 0,
       lng: parseFloat(r.Longitude) || 0,
       radius: parseFloat(r.RadiusMeters) || 100
+    }))
+  });
+}
+
+function handleGetSubjects(params) {
+  const sheet = getSheet('Subjects');
+  const subjects = sheetToJSON(sheet);
+
+  let filtered = subjects;
+  if (params.facultyId) {
+    filtered = subjects.filter(s => s.FacultyID === params.facultyId);
+  }
+
+  return jsonResponse({
+    success: true,
+    subjects: filtered.map(s => ({
+      code: s.Code,
+      name: s.Name,
+      semester: s.Semester,
+      facultyId: s.FacultyID
     }))
   });
 }
@@ -629,14 +664,14 @@ function seedData() {
   // Admin
   sheet.appendRow(['ADM001', 'Admin User', 'ADMIN', 'admin@vtu.ac.in', 'admin123', '', '', 'Admin']);
   // Faculty
-  sheet.appendRow(['FAC001', 'Prof. Harshitha', 'FACULTY', 'harshitha@vtu.ac.in', 'faculty123', '', '', 'CSE']);
-  sheet.appendRow(['FAC002', 'Dr. Ramesh', 'FACULTY', 'ramesh@vtu.ac.in', 'faculty123', '', '', 'CSE']);
+  sheet.appendRow(['FAC001', 'Prof. Harshitha', 'FACULTY', 'harshitha@vtu.ac.in', 'faculty123', '', '', 'CE']);
+  sheet.appendRow(['FAC002', 'Dr. Ramesh', 'FACULTY', 'ramesh@vtu.ac.in', 'faculty123', '', '', 'CE']);
   // Students
-  sheet.appendRow(['4PM21CS001', 'Asha Bhat', 'STUDENT', 'asha@vtu.edu', 'student123', 'A', 6, 'CSE']);
-  sheet.appendRow(['4PM21CS010', 'Ravi Kumar', 'STUDENT', 'ravi@vtu.edu', 'student123', 'A', 6, 'CSE']);
-  sheet.appendRow(['4PM21CS015', 'Sneha P', 'STUDENT', 'sneha@vtu.edu', 'student123', 'B', 6, 'CSE']);
-  sheet.appendRow(['4PM21CS020', 'Arjun Nair', 'STUDENT', 'arjun@vtu.edu', 'student123', 'A', 6, 'CSE']);
-  sheet.appendRow(['4PM21CS025', 'Kavya Sharma', 'STUDENT', 'kavya@vtu.edu', 'student123', 'B', 6, 'CSE']);
+  sheet.appendRow(['4PM21CS001', 'Asha Bhat', 'STUDENT', 'asha@vtu.edu', 'student123', 'A', 6, 'CE']);
+  sheet.appendRow(['4PM21CS010', 'Ravi Kumar', 'STUDENT', 'ravi@vtu.edu', 'student123', 'A', 6, 'CE']);
+  sheet.appendRow(['4PM21CS015', 'Sneha P', 'STUDENT', 'sneha@vtu.edu', 'student123', 'B', 6, 'CE']);
+  sheet.appendRow(['4PM21CS020', 'Arjun Nair', 'STUDENT', 'arjun@vtu.edu', 'student123', 'A', 6, 'CE']);
+  sheet.appendRow(['4PM21CS025', 'Kavya Sharma', 'STUDENT', 'kavya@vtu.edu', 'student123', 'B', 6, 'CE']);
 
   // --- Subjects Tab ---
   sheet = ss.getSheetByName('Subjects');
@@ -678,9 +713,9 @@ function seedData() {
   sheet.clear();
   sheet.appendRow(['RoomName', 'Latitude', 'Longitude', 'RadiusMeters']);
   // Default coordinates — UPDATE THESE to your actual college coordinates!
-  sheet.appendRow(['LH-101', 12.9716, 77.5946, 100]);
-  sheet.appendRow(['LH-102', 12.9716, 77.5946, 100]);
-  sheet.appendRow(['LAB-2', 12.9716, 77.5946, 100]);
+  sheet.appendRow(['LH-101', 13.962073, 75.507188, 100]);
+  sheet.appendRow(['LH-102', 13.962073, 75.507188, 100]);
+  sheet.appendRow(['LAB-2', 13.962073, 75.507188, 100]);
 
   Logger.log('✅ All seed data inserted successfully!');
 }

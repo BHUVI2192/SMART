@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, CalendarCheck, Users } from 'lucide-react';
+import { Loader2, CalendarCheck, Users, FileText } from 'lucide-react';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured, apiGet } from '../../services/api';
 
@@ -24,24 +24,15 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
     const [loading, setLoading] = useState(true);
     const [records, setRecords] = useState<SessionRecord[]>([]);
 
-    useEffect(() => {
-        loadRecords();
-    }, []);
+    useEffect(() => { loadRecords(); }, []);
 
     const loadRecords = async () => {
         if (apiReady) {
             try {
                 const result = await apiGet('getFacultyRecords', { facultyId: authUser?.id || '' });
-                if (result.success) {
-                    setRecords(result.records);
-                }
-            } catch (err) {
-                console.error(err);
-                fallback();
-            }
-        } else {
-            fallback();
-        }
+                if (result.success) setRecords(result.records);
+            } catch (err) { console.error(err); fallback(); }
+        } else { fallback(); }
         setLoading(false);
     };
 
@@ -54,63 +45,77 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
     };
 
     if (loading) {
-        return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 text-blue-900 animate-spin" /></div>;
+        return <div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>;
     }
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800">Session Records</h2>
+        <div className="space-y-6 animate-fade-in">
+            <div>
+                <h2 className="text-2xl font-bold text-slate-900">Session Records</h2>
+                <p className="text-sm text-slate-500 mt-0.5">Your past attendance sessions</p>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center space-x-4">
-                    <div className="p-3 bg-blue-100 rounded-lg"><CalendarCheck className="w-6 h-6 text-blue-700" /></div>
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="glass-card p-4 flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/15 flex-shrink-0">
+                        <CalendarCheck className="w-5 h-5 text-white" />
+                    </div>
                     <div>
-                        <p className="text-2xl font-bold text-gray-900">{records.length}</p>
-                        <p className="text-sm text-gray-500">Total Sessions</p>
+                        <p className="text-xl font-bold text-slate-900">{records.length}</p>
+                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Sessions</p>
                     </div>
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center space-x-4">
-                    <div className="p-3 bg-emerald-100 rounded-lg"><Users className="w-6 h-6 text-emerald-700" /></div>
+                <div className="glass-card p-4 flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/15 flex-shrink-0">
+                        <Users className="w-5 h-5 text-white" />
+                    </div>
                     <div>
-                        <p className="text-2xl font-bold text-gray-900">{records.reduce((sum, r) => sum + r.studentCount, 0)}</p>
-                        <p className="text-sm text-gray-500">Total Scans</p>
+                        <p className="text-xl font-bold text-slate-900">{records.reduce((sum, r) => sum + r.studentCount, 0)}</p>
+                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Total Scans</p>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Subject</th>
-                            <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Room</th>
-                            <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date/Time</th>
-                            <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">Students</th>
-                            <th className="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {records.length === 0 ? (
-                            <tr><td colSpan={5} className="text-center py-12 text-gray-400">No session records yet</td></tr>
-                        ) : (
-                            records.map(r => (
-                                <tr key={r.sessionId} className="hover:bg-gray-50">
-                                    <td className="px-6 py-3">
-                                        <div className="text-sm font-medium text-gray-900">{r.subjectName}</div>
-                                        <div className="text-xs text-gray-500">{r.subjectCode} • Section {r.section}</div>
-                                    </td>
-                                    <td className="px-6 py-3 text-sm text-gray-600">{r.room}</td>
-                                    <td className="px-6 py-3 text-sm text-gray-600">{r.startTime}</td>
-                                    <td className="px-6 py-3 text-center text-sm font-bold text-gray-900">{r.studentCount}</td>
-                                    <td className="px-6 py-3 text-center">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${r.status === 'COMPLETED' ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-800'
-                                            }`}>{r.status}</span>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+            {/* Table */}
+            <div className="glass-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-slate-100">
+                                <th className="text-left px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Subject</th>
+                                <th className="text-left px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Room</th>
+                                <th className="text-left px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Date/Time</th>
+                                <th className="text-center px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Students</th>
+                                <th className="text-center px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {records.length === 0 ? (
+                                <tr><td colSpan={5} className="text-center py-12 text-slate-400">
+                                    <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                    <p className="text-sm font-medium">No records yet</p>
+                                </td></tr>
+                            ) : (
+                                records.map(r => (
+                                    <tr key={r.sessionId} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 sm:px-6 py-3">
+                                            <div className="text-sm font-semibold text-slate-900">{r.subjectName}</div>
+                                            <div className="text-[10px] text-slate-500">{r.subjectCode} • Sec {r.section}</div>
+                                        </td>
+                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-600 hidden sm:table-cell">{r.room}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-600 hidden md:table-cell">{r.startTime}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-center text-sm font-bold text-slate-900">{r.studentCount}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-center">
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${r.status === 'COMPLETED' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'
+                                                }`}>{r.status}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

@@ -11,8 +11,8 @@ export const SUBJECTS: Subject[] = [
 
 // Faculty
 export const FACULTY_MEMBERS: Faculty[] = [
-  { id: 'f1', name: 'Prof. Harshitha', role: 'FACULTY', email: 'harshitha@vtu.ac.in', avatarInitials: 'PH', department: 'CSE' },
-  { id: 'f2', name: 'Dr. Ramesh', role: 'FACULTY', email: 'ramesh@vtu.ac.in', avatarInitials: 'DR', department: 'CSE' },
+  { id: 'f1', name: 'Prof. Harshitha', role: 'FACULTY', email: 'harshitha@vtu.ac.in', avatarInitials: 'PH', department: 'CE' },
+  { id: 'f2', name: 'Dr. Ramesh', role: 'FACULTY', email: 'ramesh@vtu.ac.in', avatarInitials: 'DR', department: 'CE' },
 ];
 
 // Students

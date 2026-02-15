@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QrCode, MapPin, ShieldCheck, UserCircle, Lock, AlertCircle } from 'lucide-react';
+import { QrCode, MapPin, ShieldCheck, UserCircle, Lock, AlertCircle, Fingerprint, Wifi } from 'lucide-react';
 import { login as apiLogin, AuthUser } from '../services/auth';
 import { isApiConfigured } from '../services/api';
 import { CURRENT_USER_MOCK } from '../data';
@@ -70,59 +70,82 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }, 500);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full flex flex-col md:flex-row">
+  const features = [
+    { icon: ShieldCheck, text: 'Anti-proxy verification', color: 'text-emerald-400' },
+    { icon: MapPin, text: 'GPS geofenced check-ins', color: 'text-amber-400' },
+    { icon: Fingerprint, text: 'Biometric ready', color: 'text-purple-400' },
+    { icon: Wifi, text: 'Real-time cross-device sync', color: 'text-blue-400' },
+  ];
 
-        {/* Left Side - Visuals */}
-        <div className="md:w-1/2 bg-blue-900 p-8 flex flex-col justify-between text-white relative overflow-hidden">
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 100%)' }}
+    >
+      {/* Decorative blobs */}
+      <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full opacity-20"
+        style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }} />
+      <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] rounded-full opacity-15"
+        style={{ background: 'radial-gradient(circle, #2563eb 0%, transparent 70%)' }} />
+      <div className="absolute top-[40%] left-[30%] w-[300px] h-[300px] rounded-full opacity-10"
+        style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+
+      <div className="w-full max-w-5xl flex flex-col lg:flex-row rounded-3xl overflow-hidden shadow-2xl shadow-black/40 animate-scale-in relative z-10"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        {/* Left Panel - Branding */}
+        <div className="lg:w-[45%] p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden"
+          style={{ background: 'linear-gradient(160deg, rgba(99,102,241,0.15) 0%, rgba(37,99,235,0.1) 100%)' }}
+        >
           <div className="relative z-10">
-            <div className="flex items-center space-x-2 mb-6">
-              <QrCode className="w-8 h-8" />
-              <span className="text-xl font-bold tracking-wide">AMS QR</span>
+            <div className="flex items-center space-x-3 mb-8">
+              <div className="w-11 h-11 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <QrCode className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-bold text-white tracking-tight">AMS QR</span>
+                <p className="text-[10px] text-slate-500 tracking-widest font-medium">SMART ATTENDANCE</p>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold mb-4">Attendance Made Smarter.</h2>
-            <p className="text-blue-200 mb-8">
-              Secure, GPS-verified attendance tracking for modern institutions.
-              Real-time analytics and 85% attendance alerts.
+
+            <h2 className="text-3xl lg:text-4xl font-extrabold text-white leading-tight mb-4">
+              Attendance<br />Made <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Smarter.</span>
+            </h2>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+              Secure, GPS-verified attendance tracking for modern institutions. Real-time analytics and 85% attendance alerts.
             </p>
           </div>
 
-          <div className="space-y-4 relative z-10">
-            <div className="flex items-center space-x-3 text-sm text-blue-100">
-              <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              <span>Proxy-proof verification</span>
-            </div>
-            <div className="flex items-center space-x-3 text-sm text-blue-100">
-              <MapPin className="w-5 h-5 text-amber-400" />
-              <span>Geo-fenced check-ins</span>
-            </div>
+          <div className="space-y-3 mt-8 relative z-10">
+            {features.map((f, i) => (
+              <div key={i} className="flex items-center space-x-3 animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                  <f.icon className={`w-4 h-4 ${f.color}`} />
+                </div>
+                <span className="text-sm text-slate-300">{f.text}</span>
+              </div>
+            ))}
           </div>
-
-          {/* Decorative Circles */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-800 opacity-50 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-emerald-900 opacity-30 blur-3xl"></div>
         </div>
 
-        {/* Right Side - Form */}
-        <div className="md:w-1/2 p-8 md:p-12">
-          <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900">Welcome Back</h3>
-            <p className="text-gray-500">Sign in to your account</p>
+        {/* Right Panel - Form */}
+        <div className="lg:w-[55%] p-8 lg:p-10" style={{ background: 'rgba(255,255,255,0.97)' }}>
+          <div className="text-center mb-6">
+            <h3 className="text-2xl font-bold text-slate-900">Welcome Back</h3>
+            <p className="text-slate-500 text-sm mt-1">Sign in to your account</p>
           </div>
 
-          {/* Toggle: Real Login vs Demo Mode */}
-          <div className="flex items-center justify-center mb-6 bg-gray-100 rounded-lg p-1">
+          {/* Toggle */}
+          <div className="flex items-center justify-center mb-6 bg-slate-100 rounded-xl p-1">
             <button
               onClick={() => setDemoMode(false)}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all ${!demoMode ? 'bg-white text-blue-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 ${!demoMode ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'
                 }`}
             >
               Login
             </button>
             <button
               onClick={() => setDemoMode(true)}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all ${demoMode ? 'bg-white text-blue-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 ${demoMode ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'
                 }`}
             >
               Demo Mode
@@ -131,35 +154,34 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           {!demoMode ? (
             <>
-              {/* Real Login Form */}
               {!apiReady && (
-                <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start space-x-2">
-                  <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="mb-4 bg-amber-50 border border-amber-200/60 rounded-xl p-3 flex items-start space-x-2 animate-slide-down">
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-700">
-                    API not configured. Set <code className="bg-amber-100 px-1 rounded">VITE_APPS_SCRIPT_URL</code> in <code className="bg-amber-100 px-1 rounded">.env.local</code> and restart. Use Demo Mode for now.
+                    API not configured. Set <code className="bg-amber-100 px-1.5 py-0.5 rounded text-[10px] font-mono">VITE_APPS_SCRIPT_URL</code> in <code className="bg-amber-100 px-1.5 py-0.5 rounded text-[10px] font-mono">.env.local</code> and restart. Use Demo Mode for now.
                   </p>
                 </div>
               )}
 
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div className="mb-4 bg-red-50 border border-red-200/60 rounded-xl p-3 flex items-start space-x-2 animate-slide-down">
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">USN / Email</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">USN / Email</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <UserCircle className="h-5 w-5 text-gray-400" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <UserCircle className="h-4 w-4 text-slate-400" />
                     </div>
                     <input
                       type="text"
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm bg-slate-50/50 transition-all duration-200 hover:border-slate-300 focus:bg-white"
                       placeholder="e.g., 4PM21CS001 or admin@vtu.ac.in"
                       required
                     />
@@ -167,16 +189,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Password</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock className="h-4 w-4 text-slate-400" />
                     </div>
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm bg-slate-50/50 transition-all duration-200 hover:border-slate-300 focus:bg-white"
                       placeholder="••••••••"
                       required
                     />
@@ -186,45 +208,51 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="submit"
                   disabled={loading || !apiReady}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-900 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm font-bold text-white gradient-primary hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    'Sign In'
+                  )}
                 </button>
               </form>
 
               <div className="mt-4 text-center">
-                <p className="text-xs text-gray-400">
-                  Default credentials: <span className="font-medium">student123</span> / <span className="font-medium">faculty123</span> / <span className="font-medium">admin123</span>
+                <p className="text-[11px] text-slate-400">
+                  Credentials: <span className="font-semibold text-slate-500">student123</span> / <span className="font-semibold text-slate-500">faculty123</span> / <span className="font-semibold text-slate-500">admin123</span>
                 </p>
               </div>
             </>
           ) : (
             <>
-              {/* Demo Mode */}
-              <p className="text-sm text-gray-500 mb-4 text-center">Select a role to login instantly (no API needed)</p>
-              <div className="space-y-3">
-                {(['ADMIN', 'FACULTY', 'STUDENT'] as const).map((role) => (
+              <p className="text-sm text-slate-500 mb-5 text-center">Select a role to login instantly</p>
+              <div className="space-y-3 stagger-children">
+                {([
+                  { role: 'ADMIN' as const, name: 'Admin User', desc: 'Full system access', gradient: 'from-red-500 to-orange-500' },
+                  { role: 'FACULTY' as const, name: 'Prof. Harshitha', desc: 'Session & QR management', gradient: 'from-emerald-500 to-teal-500' },
+                  { role: 'STUDENT' as const, name: 'Asha Bhat (4PM21CS001)', desc: 'Scan & view attendance', gradient: 'from-blue-500 to-indigo-500' },
+                ]).map((item) => (
                   <button
-                    key={role}
-                    onClick={() => handleDemoLogin(role)}
+                    key={item.role}
+                    onClick={() => handleDemoLogin(item.role)}
                     disabled={loading}
-                    className="w-full py-3 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-900 transition-all disabled:opacity-50 flex items-center justify-between"
+                    className="w-full p-4 border border-slate-200 rounded-xl text-left hover:border-indigo-300 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-300 disabled:opacity-50 flex items-center group transform hover:-translate-y-0.5"
                   >
-                    <span className="flex items-center">
-                      <UserCircle className="w-5 h-5 mr-3 text-gray-400" />
-                      Login as <span className="font-bold ml-1">{role}</span>
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {role === 'ADMIN' && 'Admin User'}
-                      {role === 'FACULTY' && 'Prof. Harshitha'}
-                      {role === 'STUDENT' && 'Asha Bhat (4PM21CS001)'}
-                    </span>
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0`}>
+                      {item.role[0]}
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <p className="text-sm font-bold text-slate-900">{item.role}</p>
+                      <p className="text-xs text-slate-500">{item.name}</p>
+                    </div>
+                    <span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors hidden sm:block">{item.desc}</span>
                   </button>
                 ))}
               </div>
-              <div className="mt-4 text-center">
-                <p className="text-xs text-gray-400">
-                  Demo mode uses local mock data. For cross-device features, configure the API and use Login mode.
+              <div className="mt-5 text-center">
+                <p className="text-[11px] text-slate-400">
+                  Demo uses local mock data. For cross-device features, configure API.
                 </p>
               </div>
             </>
