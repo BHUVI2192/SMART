@@ -249,17 +249,17 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
         </div>
 
         {/* Timeline */}
-        <div className="candy-card p-6 sm:p-8">
-          <div className="flex items-center space-x-3 mb-8">
+        <div className="candy-card p-6 sm:p-8 flex flex-col max-h-[500px]">
+          <div className="flex items-center space-x-3 mb-8 flex-shrink-0">
             <div className="w-2 h-6 rounded-full bg-indigo-400" />
             <h3 className="text-sm font-black text-slate-900 tracking-tight">Today's Timeline</h3>
           </div>
-          <div className="relative ml-4 space-y-10">
-            {/* Vertical line - Candy thread style */}
-            <div className="absolute left-[7px] top-2 bottom-2 w-1 bg-slate-100 rounded-full" />
+          <div className="relative ml-4 space-y-10 overflow-y-auto pr-6 custom-scrollbar flex-1">
+            {/* Vertical line - Candy thread style - Adjusted to be inside scrollable area or handle scrolling */}
+            <div className="absolute left-[7px] top-2 bottom-4 w-1 bg-slate-100 rounded-full" />
 
             {timetable.map((cls) => (
-              <div key={cls.id} className="relative pl-10 group">
+              <div key={cls.id} className="relative pl-10 group pb-2">
                 <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-4 border-white shadow-md z-10 transition-all duration-500 group-hover:scale-150 ${cls.status === 'COMPLETED' ? 'bg-slate-300' :
                   cls.status === 'ONGOING' ? 'bg-indigo-500 animate-pulse-glow' : 'bg-emerald-400'
                   }`} />
