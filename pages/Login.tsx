@@ -78,74 +78,72 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1a1a2e 100%)' }}
-    >
-      {/* Decorative blobs */}
-      <div className="absolute top-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full opacity-20"
-        style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }} />
-      <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] rounded-full opacity-15"
-        style={{ background: 'radial-gradient(circle, #2563eb 0%, transparent 70%)' }} />
-      <div className="absolute top-[40%] left-[30%] w-[300px] h-[300px] rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }} />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-white">
+      {/* Decorative blobs are now handled by body mesh background in index.css, 
+          but we can add extra vibrancy here */}
+      <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full opacity-20 blur-[100px] animate-bop"
+        style={{ background: 'var(--primary-light)' }} />
+      <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full opacity-20 blur-[100px] animate-bop"
+        style={{ background: 'var(--success)', animationDelay: '-2s' }} />
 
-      <div className="w-full max-w-5xl flex flex-col lg:flex-row rounded-3xl overflow-hidden shadow-2xl shadow-black/40 animate-scale-in relative z-10"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+      <div className="w-full max-w-5xl flex flex-col lg:flex-row candy-card animate-fade-in relative z-10 p-0 overflow-hidden"
+        style={{ minHeight: '600px' }}
       >
         {/* Left Panel - Branding */}
-        <div className="lg:w-[45%] p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden"
-          style={{ background: 'linear-gradient(160deg, rgba(99,102,241,0.15) 0%, rgba(37,99,235,0.1) 100%)' }}
+        <div className="lg:w-[42%] p-10 lg:p-12 flex flex-col justify-between relative overflow-hidden border-r border-white/20"
+          style={{ background: 'linear-gradient(160deg, rgba(67,97,238,0.12) 0%, rgba(76,201,240,0.08) 100%)' }}
         >
           <div className="relative z-10">
-            <div className="flex items-center space-x-3 mb-8">
-              <div className="w-11 h-11 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <div className="flex items-center space-x-3 mb-10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl shadow-indigo-200">
                 <QrCode className="w-6 h-6 text-white" />
               </div>
               <div>
-                <span className="text-xl font-bold text-white tracking-tight">AMS QR</span>
-                <p className="text-[10px] text-slate-500 tracking-widest font-medium">SMART ATTENDANCE</p>
+                <span className="text-2xl font-black text-slate-800 tracking-tight">AMS QR</span>
+                <p className="text-[10px] text-slate-400 tracking-[0.2em] font-bold">SMART ATTENDANCE</p>
               </div>
             </div>
 
-            <h2 className="text-3xl lg:text-4xl font-extrabold text-white leading-tight mb-4">
-              Attendance<br />Made <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Smarter.</span>
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-800 leading-[1.1] mb-6">
+              Attendance<br />Made <span className="text-indigo-600">Smarter.</span>
             </h2>
-            <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-              Secure, GPS-verified attendance tracking for modern institutions. Real-time analytics and 85% attendance alerts.
+            <p className="text-slate-500 text-base leading-relaxed max-w-sm font-medium">
+              A high-precision, GPS-verified attendance tracking ecosystem for modern VTU institutions.
             </p>
           </div>
 
-          <div className="space-y-3 mt-8 relative z-10">
+          <div className="space-y-4 mt-10 relative z-10">
             {features.map((f, i) => (
-              <div key={i} className="flex items-center space-x-3 animate-slide-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                  <f.icon className={`w-4 h-4 ${f.color}`} />
+              <div key={i} className="flex items-center space-x-4 animate-slide-up bg-white/40 backdrop-blur-sm p-3 rounded-2xl border border-white/50"
+                style={{ animationDelay: `${i * 0.1}s` }}>
+                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                  <f.icon className={`w-5 h-5 ${f.color.replace('text-', 'text-indigo-500')}`} style={{ color: !f.color.includes('emerald') && !f.color.includes('amber') ? 'var(--primary)' : undefined }} />
                 </div>
-                <span className="text-sm text-slate-300">{f.text}</span>
+                <span className="text-sm font-bold text-slate-700">{f.text}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Right Panel - Form */}
-        <div className="lg:w-[55%] p-8 lg:p-10" style={{ background: 'rgba(255,255,255,0.97)' }}>
-          <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-slate-900">Welcome Back</h3>
-            <p className="text-slate-500 text-sm mt-1">Sign in to your account</p>
+        <div className="lg:w-[58%] p-10 lg:p-14 bg-white/60">
+          <div className="text-center mb-8">
+            <h3 className="text-3xl font-black text-slate-900">Welcome Back</h3>
+            <p className="text-slate-500 text-sm mt-2 font-medium">Login to your smart dashboard</p>
           </div>
 
-          {/* Toggle */}
-          <div className="flex items-center justify-center mb-6 bg-slate-100 rounded-xl p-1">
+          {/* Toggle - Pill style */}
+          <div className="flex items-center justify-center mb-8 bg-slate-100/80 rounded-full p-1.5 candy-inner max-w-sm mx-auto">
             <button
               onClick={() => setDemoMode(false)}
-              className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 ${!demoMode ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 py-3 px-6 text-sm font-bold rounded-full transition-all duration-500 ${!demoMode ? 'bg-white text-indigo-600 shadow-xl shadow-indigo-100' : 'text-slate-500 hover:text-slate-800'
                 }`}
             >
-              Login
+              Real Mode
             </button>
             <button
               onClick={() => setDemoMode(true)}
-              className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 ${demoMode ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 py-3 px-6 text-sm font-bold rounded-full transition-all duration-500 ${demoMode ? 'bg-white text-indigo-600 shadow-xl shadow-indigo-100' : 'text-slate-500 hover:text-slate-800'
                 }`}
             >
               Demo Mode
@@ -153,53 +151,53 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           {!demoMode ? (
-            <>
+            <div className="max-w-md mx-auto">
               {!apiReady && (
-                <div className="mb-4 bg-amber-50 border border-amber-200/60 rounded-xl p-3 flex items-start space-x-2 animate-slide-down">
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-amber-700">
-                    API not configured. Set <code className="bg-amber-100 px-1.5 py-0.5 rounded text-[10px] font-mono">VITE_APPS_SCRIPT_URL</code> in <code className="bg-amber-100 px-1.5 py-0.5 rounded text-[10px] font-mono">.env.local</code> and restart. Use Demo Mode for now.
+                <div className="mb-6 bg-blue-50/50 border border-blue-100 rounded-[24px] p-4 flex items-start space-x-3 animate-slide-down">
+                  <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                    API connection required. Configure <code className="bg-blue-100/50 px-1.5 py-0.5 rounded text-[10px] font-mono">VITE_APPS_SCRIPT_URL</code> in your environment to enable real-time tracking.
                   </p>
                 </div>
               )}
 
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200/60 rounded-xl p-3 flex items-start space-x-2 animate-slide-down">
-                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className="mb-6 bg-red-50 border border-red-100 rounded-[24px] p-4 flex items-start space-x-3 animate-slide-down">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700 font-bold">{error}</p>
                 </div>
               )}
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">USN / Email</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                      <UserCircle className="h-4 w-4 text-slate-400" />
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-xs font-black text-slate-500 ml-4 uppercase tracking-[0.1em]">Identity</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none group-focus-within:text-indigo-500 transition-colors">
+                      <UserCircle className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500" />
                     </div>
                     <input
                       type="text"
                       value={userId}
                       onChange={(e) => setUserId(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm bg-slate-50/50 transition-all duration-200 hover:border-slate-300 focus:bg-white"
-                      placeholder="e.g., 4PM21CS001 or admin@vtu.ac.in"
+                      className="block w-full pl-14 pr-6 py-4 border border-slate-100 bg-white/80 rounded-[20px] shadow-sm text-slate-800 font-bold placeholder:text-slate-300 transition-all placeholder:font-normal"
+                      placeholder="USN or Email ID"
                       required
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Password</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                      <Lock className="h-4 w-4 text-slate-400" />
+                <div className="space-y-2">
+                  <label className="block text-xs font-black text-slate-500 ml-4 uppercase tracking-[0.1em]">Security</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors">
+                      <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500" />
                     </div>
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm bg-slate-50/50 transition-all duration-200 hover:border-slate-300 focus:bg-white"
-                      placeholder="••••••••"
+                      className="block w-full pl-14 pr-6 py-4 border border-slate-100 bg-white/80 rounded-[20px] shadow-sm text-slate-800 font-bold placeholder:text-slate-300 transition-all placeholder:font-normal"
+                      placeholder="Your Password"
                       required
                     />
                   </div>
@@ -208,54 +206,45 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 <button
                   type="submit"
                   disabled={loading || !apiReady}
-                  className="w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm font-bold text-white gradient-primary hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full py-5 rounded-full text-base font-black text-white btn-primary mt-4 disabled:opacity-40"
                 >
                   {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    'Sign In'
+                    'Secure Login'
                   )}
                 </button>
               </form>
-
-              <div className="mt-4 text-center">
-                <p className="text-[11px] text-slate-400">
-                  Credentials: <span className="font-semibold text-slate-500">student123</span> / <span className="font-semibold text-slate-500">faculty123</span> / <span className="font-semibold text-slate-500">admin123</span>
-                </p>
-              </div>
-            </>
+            </div>
           ) : (
-            <>
-              <p className="text-sm text-slate-500 mb-5 text-center">Select a role to login instantly</p>
-              <div className="space-y-3 stagger-children">
+            <div className="max-w-md mx-auto">
+              <p className="text-sm text-slate-500 mb-6 text-center font-medium">Select a demo role to experience the portal</p>
+              <div className="space-y-4 stagger-children">
                 {([
-                  { role: 'ADMIN' as const, name: 'Admin User', desc: 'Full system access', gradient: 'from-red-500 to-orange-500' },
-                  { role: 'FACULTY' as const, name: 'Prof. Harshitha', desc: 'Session & QR management', gradient: 'from-emerald-500 to-teal-500' },
-                  { role: 'STUDENT' as const, name: 'Asha Bhat (4PM21CS001)', desc: 'Scan & view attendance', gradient: 'from-blue-500 to-indigo-500' },
+                  { role: 'ADMIN' as const, name: 'Institution Admin', desc: 'Control Panel', icon: '⚡' },
+                  { role: 'FACULTY' as const, name: 'Faculty Member', desc: 'Session Control', icon: '🎓' },
+                  { role: 'STUDENT' as const, name: 'Student Profile', desc: 'Attendance Card', icon: '📱' },
                 ]).map((item) => (
                   <button
                     key={item.role}
                     onClick={() => handleDemoLogin(item.role)}
                     disabled={loading}
-                    className="w-full p-4 border border-slate-200 rounded-xl text-left hover:border-indigo-300 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-300 disabled:opacity-50 flex items-center group transform hover:-translate-y-0.5"
+                    className="w-full p-5 bg-white border border-slate-100 rounded-[28px] text-left hover:border-indigo-300 hover:bg-white transition-all duration-500 disabled:opacity-50 flex items-center group shadow-sm hover:shadow-xl hover:shadow-indigo-500/10"
                   >
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0`}>
-                      {item.role[0]}
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform duration-500">
+                      {item.icon}
                     </div>
-                    <div className="ml-3 flex-1">
-                      <p className="text-sm font-bold text-slate-900">{item.role}</p>
-                      <p className="text-xs text-slate-500">{item.name}</p>
+                    <div className="ml-5 flex-1">
+                      <p className="text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{item.role}</p>
+                      <p className="text-xs text-slate-500 font-bold">{item.name}</p>
                     </div>
-                    <span className="text-xs text-slate-400 group-hover:text-indigo-500 transition-colors hidden sm:block">{item.desc}</span>
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                      <ShieldCheck className="w-5 h-5 opacity-40 group-hover:opacity-100" />
+                    </div>
                   </button>
                 ))}
               </div>
-              <div className="mt-5 text-center">
-                <p className="text-[11px] text-slate-400">
-                  Demo uses local mock data. For cross-device features, configure API.
-                </p>
-              </div>
-            </>
+            </div>
           )}
         </div>
       </div>
