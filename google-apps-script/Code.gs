@@ -79,6 +79,8 @@ function doGet(e) {
         return handleGetFacultyRecords(e.parameter);
       case 'getSubjects':
         return handleGetSubjects(e.parameter);
+      case 'forgotPassword':
+        return handleForgotPassword(e.parameter);
       case 'seedData':
         seedData();
         return jsonResponse({ success: true, message: 'Seed data created successfully' });
@@ -110,6 +112,8 @@ function doPost(e) {
         return handleMarkAttendance(body);
       case 'addClass':
         return handleAddClass(body);
+      case 'changePassword':
+        return handleChangePassword(body);
       default:
         return jsonResponse({ success: false, error: 'Unknown POST action: ' + action });
     }
@@ -135,6 +139,21 @@ function handleLogin(params) {
     return jsonResponse({ success: false, error: 'Invalid credentials' });
   }
 
+  // Log the login session
+  try {
+    const logSheet = getSheet('LoginLogs');
+    if (logSheet) {
+      logSheet.appendRow([
+        user.USN || user.Email,
+        user.Role,
+        new Date().toISOString(),
+        params.userAgent || 'Unknown'
+      ]);
+    }
+  } catch (e) {
+    console.error('Failed to log login session', e);
+  }
+
   return jsonResponse({
     success: true,
     user: {
@@ -149,6 +168,51 @@ function handleLogin(params) {
       avatarInitials: user.Name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase()
     }
   });
+}
+
+function handleChangePassword(body) {
+  const { userId, oldPassword, newPassword } = body;
+  const sheet = getSheet('Users');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const usnCol = headers.indexOf('USN');
+  const emailCol = headers.indexOf('Email');
+  const passwordCol = headers.indexOf('Password');
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if ((String(row[usnCol]) === String(userId) || String(row[emailCol]) === String(userId))) {
+      if (String(row[passwordCol]) === String(oldPassword)) {
+        sheet.getRange(i + 1, passwordCol + 1).setValue(newPassword);
+        return jsonResponse({ success: true, message: 'Password changed successfully' });
+      } else {
+        return jsonResponse({ success: false, error: 'Incorrect previous password' });
+      }
+    }
+  }
+
+  return jsonResponse({ success: false, error: 'User not found' });
+}
+
+function handleForgotPassword(params) {
+  const { email } = params;
+  const sheet = getSheet('Users');
+  const users = sheetToJSON(sheet);
+  const user = users.find(u => String(u.Email).toLowerCase() === String(email).toLowerCase());
+
+  if (!user) {
+    return jsonResponse({ success: false, error: 'No user found with this email' });
+  }
+
+  try {
+    const subject = 'Password Recovery - AMS Attendance System';
+    const body = `Hello ${user.Name},\n\nYour current password for the AMS Attendance System is: ${user.Password}\n\nPlease log in and change your password for security.\n\nBest regards,\nAMS System Admin`;
+    
+    MailApp.sendEmail(email, subject, body);
+    return jsonResponse({ success: true, message: 'Password reset email sent' });
+  } catch (e) {
+    return jsonResponse({ success: false, error: 'Failed to send email: ' + e.toString() });
+  }
 }
 
 // ============================================================
@@ -725,6 +789,9 @@ function seedData() {
      const sheet = ss.getSheetByName('Rooms');
      sheet.appendRow(['LH-101', 13.962073, 75.507188, 100]);
   }
+
+  // --- LoginLogs Tab ---
+  createSheetIfNotExists('LoginLogs', ['UserID', 'Role', 'Timestamp', 'UserAgent']);
 
   Logger.log('✅ Checked all sheets. Did NOT delete any existing data.');
 }

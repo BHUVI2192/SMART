@@ -12,6 +12,8 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import FacultyRecords from './pages/faculty/FacultyRecords';
 import AddClass from './pages/faculty/AddClass';
+import ForgotPassword from './pages/ForgotPassword';
+import ChangePassword from './pages/ChangePassword';
 import { User } from './types';
 import { getCurrentUser, toAppUser, AuthUser, logout as authLogout } from './services/auth';
 
@@ -55,6 +57,12 @@ const App: React.FC = () => {
     <Layout user={user} onLogout={handleLogout}>
       <Routes>
         <Route path="/" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to={`/${user.role.toLowerCase()}/dashboard`} />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/change-password" element={
+          <ProtectedRoute user={user} allowedRoles={['ADMIN', 'FACULTY', 'STUDENT']}>
+            <ChangePassword authUser={authUser} />
+          </ProtectedRoute>
+        } />
 
         {/* Admin Routes */}
         <Route

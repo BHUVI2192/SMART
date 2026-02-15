@@ -187,7 +187,16 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-xs font-black text-slate-500 ml-4 uppercase tracking-[0.1em]">Security</label>
+                  <div className="flex items-center justify-between px-4">
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-[0.1em]">Security</label>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/forgot-password')}
+                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-colors">
                       <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500" />

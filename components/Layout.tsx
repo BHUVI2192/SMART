@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, Calendar, FileText,
   QrCode, History, LogOut, Menu, X, User as UserIcon,
-  ChevronRight
+  ChevronRight, ShieldCheck
 } from 'lucide-react';
 import { User, Role } from '../types';
 
@@ -165,6 +165,16 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
               }}
             />
           ))}
+          <div className="border-t border-slate-50 my-2" />
+          <NavItem
+            icon={ShieldCheck}
+            label="Change Password"
+            isActive={isActive('/change-password')}
+            onClick={() => {
+              navigate('/change-password');
+              setIsSidebarOpen(false);
+            }}
+          />
         </nav>
 
         {/* Logout */}
