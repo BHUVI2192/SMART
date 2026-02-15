@@ -43,6 +43,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
   const [subjects, setSubjects] = useState<{ code: string; name: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [addError, setAddError] = useState('');
+  const [displayDay, setDisplayDay] = useState<string>('');
 
   useEffect(() => {
     loadTimetable();
@@ -81,7 +82,10 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const today = days[new Date().getDay()];
         const result = await apiGet('getTimetable', { facultyId: authUser?.id || '', day: today });
-        if (result.success) setTimetable(result.timetable);
+        if (result.success) {
+          setTimetable(result.timetable);
+          setDisplayDay(result.displayDay || today);
+        }
       } catch (err) {
         console.error('Failed to load timetable:', err);
         fallbackToLocal();
@@ -234,7 +238,9 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
       {/* Section Header */}
       <div className="flex items-center space-x-2">
         <div className="w-1 h-5 rounded-full gradient-accent" />
-        <h3 className="text-base font-bold text-slate-800">Today's Timetable</h3>
+        <h3 className="text-base font-bold text-slate-800">
+          {displayDay && displayDay !== new Date().toLocaleDateString('en-US', { weekday: 'long' }) ? `Upcoming: ${displayDay}'s Timetable` : "Today's Timetable"}
+        </h3>
       </div>
 
       {/* Class Cards */}

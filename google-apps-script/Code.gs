@@ -495,6 +495,33 @@ function handleGetTimetable(params) {
     filtered = filtered.filter(t => t.Day === params.day);
   }
 
+  // If no classes found for "today" (e.g. Sunday or empty day), find the next active day
+  const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  let currentDayIndex = daysOrder.indexOf(params.day);
+  let displayDay = params.day;
+
+  if (filtered.length === 0 && currentDayIndex !== -1) {
+    // Check next 6 days
+    for (let i = 1; i <= 6; i++) {
+      const nextDayIndex = (currentDayIndex + i) % 7;
+      const nextDay = daysOrder[nextDayIndex];
+      // Skip Sunday if no classes usually
+      if (nextDay === 'Sunday') continue;
+
+      let nextDayClasses = timetable;
+      if (params.facultyId) {
+        nextDayClasses = timetable.filter(t => t.FacultyID === params.facultyId);
+      }
+      nextDayClasses = nextDayClasses.filter(t => t.Day === nextDay);
+
+      if (nextDayClasses.length > 0) {
+        filtered = nextDayClasses;
+        displayDay = nextDay;
+        break;
+      }
+    }
+  }
+
   // Check if sessions are active for these timetable entries and update status
   const sessSheet = getSheet('Sessions');
   const sessions = sheetToJSON(sessSheet);
@@ -518,7 +545,7 @@ function handleGetTimetable(params) {
     };
   });
 
-  return jsonResponse({ success: true, timetable: enriched });
+  return jsonResponse({ success: true, timetable: enriched, displayDay: displayDay });
 }
 
 function handleAddClass(body) {
@@ -649,73 +676,50 @@ function getDayName() {
   return days[new Date().getDay()];
 }
 
+// ... existing code ...
+
 // ============================================================
-// SEED DATA — Run this function ONCE to populate the sheet
+// SEED DATA — SAFELY ADDS MISSING TABS ONLY
 // ============================================================
 
 function seedData() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
 
+  // Helper to create sheet only if it doesn't exist
+  function createSheetIfNotExists(name, headers) {
+    let sheet = ss.getSheetByName(name);
+    if (!sheet) {
+      sheet = ss.insertSheet(name);
+      sheet.appendRow(headers);
+      return true; // Created new
+    }
+    return false; // Already exists
+  }
+
   // --- Users Tab ---
-  let sheet = ss.getSheetByName('Users');
-  if (!sheet) sheet = ss.insertSheet('Users');
-  sheet.clear();
-  sheet.appendRow(['USN', 'Name', 'Role', 'Email', 'Password', 'Section', 'Semester', 'Department']);
-  // Admin
-  sheet.appendRow(['ADM001', 'Admin User', 'ADMIN', 'admin@vtu.ac.in', 'admin123', '', '', 'Admin']);
-  // Faculty
-  sheet.appendRow(['FAC001', 'Prof. Harshitha', 'FACULTY', 'harshitha@vtu.ac.in', 'faculty123', '', '', 'CE']);
-  sheet.appendRow(['FAC002', 'Dr. Ramesh', 'FACULTY', 'ramesh@vtu.ac.in', 'faculty123', '', '', 'CE']);
-  // Students
-  sheet.appendRow(['4PM21CS001', 'Asha Bhat', 'STUDENT', 'asha@vtu.edu', 'student123', 'A', 6, 'CE']);
-  sheet.appendRow(['4PM21CS010', 'Ravi Kumar', 'STUDENT', 'ravi@vtu.edu', 'student123', 'A', 6, 'CE']);
-  sheet.appendRow(['4PM21CS015', 'Sneha P', 'STUDENT', 'sneha@vtu.edu', 'student123', 'B', 6, 'CE']);
-  sheet.appendRow(['4PM21CS020', 'Arjun Nair', 'STUDENT', 'arjun@vtu.edu', 'student123', 'A', 6, 'CE']);
-  sheet.appendRow(['4PM21CS025', 'Kavya Sharma', 'STUDENT', 'kavya@vtu.edu', 'student123', 'B', 6, 'CE']);
+  if (createSheetIfNotExists('Users', ['USN', 'Name', 'Role', 'Email', 'Password', 'Section', 'Semester', 'Department'])) {
+    // Only add default admin if sheet was just created
+    const sheet = ss.getSheetByName('Users');
+    sheet.appendRow(['ADM001', 'Admin User', 'ADMIN', 'admin@vtu.ac.in', 'admin123', '', '', 'Admin']);
+  }
 
   // --- Subjects Tab ---
-  sheet = ss.getSheetByName('Subjects');
-  if (!sheet) sheet = ss.insertSheet('Subjects');
-  sheet.clear();
-  sheet.appendRow(['Code', 'Name', 'Semester', 'FacultyID']);
-  sheet.appendRow(['18CS61', 'System Software', 6, 'FAC001']);
-  sheet.appendRow(['18CS62', 'Computer Graphics', 6, 'FAC002']);
-  sheet.appendRow(['18CS63', 'Web Technology', 6, 'FAC001']);
-  sheet.appendRow(['18CS64', 'Data Mining', 6, 'FAC002']);
-  sheet.appendRow(['18CS65', 'Cloud Computing', 6, 'FAC001']);
+  createSheetIfNotExists('Subjects', ['Code', 'Name', 'Semester', 'FacultyID']);
 
   // --- Sessions Tab ---
-  sheet = ss.getSheetByName('Sessions');
-  if (!sheet) sheet = ss.insertSheet('Sessions');
-  sheet.clear();
-  sheet.appendRow(['SessionID', 'FacultyID', 'SubjectCode', 'SubjectName', 'Room', 'Section', 'Token', 'StartTime', 'EndTime', 'Status', 'Lat', 'Lng']);
+  createSheetIfNotExists('Sessions', ['SessionID', 'FacultyID', 'SubjectCode', 'SubjectName', 'Room', 'Section', 'Token', 'StartTime', 'EndTime', 'Status', 'Lat', 'Lng']);
 
   // --- Attendance Tab ---
-  sheet = ss.getSheetByName('Attendance');
-  if (!sheet) sheet = ss.insertSheet('Attendance');
-  sheet.clear();
-  sheet.appendRow(['USN', 'StudentName', 'SessionID', 'SubjectCode', 'SubjectName', 'Timestamp', 'GPSLat', 'GPSLng', 'VerifyStatus']);
+  createSheetIfNotExists('Attendance', ['USN', 'StudentName', 'SessionID', 'SubjectCode', 'SubjectName', 'Timestamp', 'GPSLat', 'GPSLng', 'VerifyStatus']);
 
   // --- Timetable Tab ---
-  sheet = ss.getSheetByName('Timetable');
-  if (!sheet) sheet = ss.insertSheet('Timetable');
-  sheet.clear();
-  sheet.appendRow(['ID', 'Day', 'StartTime', 'EndTime', 'SubjectCode', 'SubjectName', 'FacultyID', 'Section', 'Room', 'Status']);
-  sheet.appendRow(['tt1', 'Monday', '09:00', '10:00', '18CS61', 'System Software', 'FAC001', '6A', 'LH-101', 'UPCOMING']);
-  sheet.appendRow(['tt2', 'Monday', '10:00', '11:00', '18CS62', 'Computer Graphics', 'FAC002', '6A', 'LH-101', 'UPCOMING']);
-  sheet.appendRow(['tt3', 'Monday', '11:15', '12:15', '18CS63', 'Web Technology', 'FAC001', '6A', 'LAB-2', 'UPCOMING']);
-  sheet.appendRow(['tt4', 'Tuesday', '09:00', '10:00', '18CS64', 'Data Mining', 'FAC002', '6A', 'LH-102', 'UPCOMING']);
-  sheet.appendRow(['tt5', 'Tuesday', '10:00', '11:00', '18CS65', 'Cloud Computing', 'FAC001', '6A', 'LH-101', 'UPCOMING']);
+  createSheetIfNotExists('Timetable', ['ID', 'Day', 'StartTime', 'EndTime', 'SubjectCode', 'SubjectName', 'FacultyID', 'Section', 'Room', 'Status']);
 
   // --- Rooms Tab ---
-  sheet = ss.getSheetByName('Rooms');
-  if (!sheet) sheet = ss.insertSheet('Rooms');
-  sheet.clear();
-  sheet.appendRow(['RoomName', 'Latitude', 'Longitude', 'RadiusMeters']);
-  // Default coordinates — UPDATE THESE to your actual college coordinates!
-  sheet.appendRow(['LH-101', 13.962073, 75.507188, 100]);
-  sheet.appendRow(['LH-102', 13.962073, 75.507188, 100]);
-  sheet.appendRow(['LAB-2', 13.962073, 75.507188, 100]);
+  if (createSheetIfNotExists('Rooms', ['RoomName', 'Latitude', 'Longitude', 'RadiusMeters'])) {
+     const sheet = ss.getSheetByName('Rooms');
+     sheet.appendRow(['LH-101', 13.962073, 75.507188, 100]);
+  }
 
-  Logger.log('✅ All seed data inserted successfully!');
+  Logger.log('✅ Checked all sheets. Did NOT delete any existing data.');
 }
