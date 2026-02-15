@@ -114,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="space-y-4 mt-10 relative z-10">
             {features.map((f, i) => (
-              <div key={i} className="flex items-center space-x-4 animate-slide-up bg-white/40 backdrop-blur-sm p-3 rounded-2xl border border-white/50"
+              <div key={i} className="flex items-center space-x-4 animate-slide-up bg-white p-3 rounded-2xl border border-slate-100 shadow-sm"
                 style={{ animationDelay: `${i * 0.1}s` }}>
                 <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-sm">
                   <f.icon className={`w-5 h-5 ${f.color.replace('text-', 'text-indigo-500')}`} style={{ color: !f.color.includes('emerald') && !f.color.includes('amber') ? 'var(--primary)' : undefined }} />
@@ -126,7 +126,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         {/* Right Panel - Form */}
-        <div className="lg:w-[58%] p-10 lg:p-14 bg-white/60">
+        <div className="lg:w-[58%] p-10 lg:p-14 bg-white">
           <div className="text-center mb-8">
             <h3 className="text-3xl font-black text-slate-900">Welcome Back</h3>
             <p className="text-slate-500 text-sm mt-2 font-medium">Login to your smart dashboard</p>

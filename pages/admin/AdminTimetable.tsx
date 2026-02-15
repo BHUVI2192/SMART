@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Clock, MapPin, Calendar, Users } from 'lucide-react';
+import LoadingScreen from '../../components/LoadingScreen';
 import { isApiConfigured, apiGet } from '../../services/api';
 import { TODAY_TIMETABLE, SUBJECTS, FACULTY_MEMBERS } from '../../data';
 import { TimetableEntry } from '../../types';
@@ -70,8 +71,8 @@ const AdminTimetable: React.FC = () => {
                         key={day}
                         onClick={() => setSelectedDay(day)}
                         className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${selectedDay === day
-                                ? 'gradient-primary text-white shadow-md shadow-blue-500/20'
-                                : 'bg-white/60 text-slate-600 hover:bg-white hover:shadow-sm border border-slate-200/60'
+                            ? 'gradient-primary text-white shadow-md shadow-blue-500/20'
+                            : 'bg-white text-slate-600 hover:bg-white hover:shadow-sm border border-slate-200/60'
                             }`}
                     >
                         {day.slice(0, 3)}
@@ -80,18 +81,16 @@ const AdminTimetable: React.FC = () => {
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center h-48">
-                    <div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                </div>
+                <LoadingScreen />
             ) : timetable.length === 0 ? (
-                <div className="glass-card p-12 text-center">
+                <div className="candy-card p-12 text-center">
                     <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-3" />
                     <p className="text-sm font-semibold text-slate-400">No classes on {selectedDay}</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
                     {timetable.map(entry => (
-                        <div key={entry.id} className="glass-card p-5 relative overflow-hidden">
+                        <div key={entry.id} className="candy-card p-5 relative overflow-hidden">
                             <div className="absolute top-0 left-0 w-1 h-full rounded-r-full gradient-accent" />
                             <div className="ml-3">
                                 <h3 className="text-base font-bold text-slate-900 mb-0.5">{entry.subjectName}</h3>

@@ -242,10 +242,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
                     <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em]">Happening Now</span>
                     <h2 className="text-2xl sm:text-5xl font-black mt-2 mb-4 tracking-tight">{activeClassName}</h2>
                     <div className="flex flex-wrap gap-4 mt-2">
-                      <p className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl text-slate-100 text-sm font-bold flex items-center">
+                      <p className="bg-slate-800 px-4 py-2 rounded-2xl text-slate-100 text-sm font-bold flex items-center">
                         <Clock className="w-4 h-4 mr-2 text-indigo-400" /> {activeClassTime}
                       </p>
-                      <p className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl text-slate-100 text-sm font-bold flex items-center">
+                      <p className="bg-slate-800 px-4 py-2 rounded-2xl text-slate-100 text-sm font-bold flex items-center">
                         <MapPin className="w-4 h-4 mr-2 text-indigo-400" /> {activeClassRoom}
                       </p>
                     </div>
@@ -257,7 +257,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
               </div>
               <button
                 onClick={() => navigate('/student/scan')}
-                className="mt-10 relative z-10 w-full sm:w-auto self-start bg-white text-indigo-600 px-10 py-5 rounded-full font-black text-base flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-white/10"
+                className="mt-10 relative z-10 w-full sm:w-auto self-start bg-white text-indigo-600 px-10 py-5 rounded-full font-black text-base flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-white/10 tap-squish"
               >
                 <QrCode className="w-6 h-6 mr-3" />
                 Scan QR Attendance
@@ -280,21 +280,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Subject Stats */}
         <div className="candy-card overflow-hidden">
-          <div className="p-5 sm:p-8 border-white/10 flex justify-between items-center bg-white/50">
+          <div className="p-5 sm:p-8 border-slate-50 flex justify-between items-center bg-slate-50/50">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-6 rounded-full bg-indigo-500" />
               <h3 className="text-sm font-black text-slate-900 tracking-tight">Subject-wise Status</h3>
             </div>
             <span className="text-[10px] text-indigo-600 font-black bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider">Target: 85%</span>
           </div>
-          <div className="px-4 pb-4 space-y-2">
+          <div className="px-4 pb-4 space-y-2 stagger-children">
             {subjectStats.length === 0 ? (
               <div className="p-12 text-center text-slate-400">
                 <p className="text-sm font-bold">Waiting for data sync...</p>
               </div>
             ) : (
               subjectStats.map((sub) => (
-                <div key={sub.subjectCode} className="p-4 sm:p-5 bg-white/40 hover:bg-white rounded-[28px] border border-transparent hover:border-indigo-100 transition-all duration-500 flex items-center group shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
+                <div key={sub.subjectCode} className="p-4 sm:p-5 bg-slate-50/40 hover:bg-slate-50 rounded-[28px] border border-transparent hover:border-indigo-100 transition-all duration-500 flex items-center group shadow-sm hover:shadow-xl hover:shadow-indigo-500/5">
                   <div className="flex-1">
                     <h4 className="text-base font-black text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">{sub.subjectCode}</h4>
                     <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide opacity-60">{sub.subjectName}</p>
@@ -339,7 +339,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
                 <button
                   key={day}
                   onClick={() => setSelectedDay(day)}
-                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 ${selectedDay === day
+                  className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex-shrink-0 tap-squish ${selectedDay === day
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-105'
                     : 'bg-slate-50 text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-md'
                     }`}
@@ -349,7 +349,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
               ))}
             </div>
           </div>
-          <div className="relative ml-4 space-y-10 overflow-y-auto pr-6 custom-scrollbar flex-1">
+          <div className="relative ml-4 space-y-10 overflow-y-auto pr-6 custom-scrollbar flex-1 stagger-children">
             {/* Vertical line - Candy thread style - Adjusted to be inside scrollable area or handle scrolling */}
             <div className="absolute left-[7px] top-2 bottom-4 w-1 bg-slate-100 rounded-full" />
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, RefreshCw, Smartphone, MapPin, Users, StopCircle, Loader2, Wifi, WifiOff, Clock } from 'lucide-react';
+import LoadingScreen from '../../components/LoadingScreen';
 import QRCode from 'qrcode';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured, apiGet } from '../../services/api';
@@ -162,7 +163,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>;
+    return <LoadingScreen />;
   }
 
   const timerPercent = (timeLeft / 600) * 100;
@@ -192,7 +193,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* QR Display */}
-        <div className="lg:col-span-2 glass-card overflow-hidden">
+        <div className="lg:col-span-2 candy-card overflow-hidden">
           {/* Header Strip */}
           <div className="p-5 gradient-dark text-white flex justify-between items-center">
             <div>
@@ -254,7 +255,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
         {/* Right: Live Stats */}
         <div className="space-y-4">
           {/* Present Count */}
-          <div className="glass-card p-5 text-center">
+          <div className="candy-card p-5 text-center">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center mx-auto mb-3 shadow-md shadow-indigo-500/20">
               <Users className="w-6 h-6 text-white" />
             </div>
@@ -263,7 +264,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
           </div>
 
           {/* Activity Log */}
-          <div className="glass-card overflow-hidden">
+          <div className="candy-card overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center space-x-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <h3 className="text-sm font-bold text-slate-800">Live Activity</h3>

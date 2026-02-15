@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, CalendarCheck, Users, FileText } from 'lucide-react';
+import LoadingScreen from '../../components/LoadingScreen';
 import { AuthUser } from '../../services/auth';
 import { isApiConfigured, apiGet } from '../../services/api';
 
@@ -45,7 +46,7 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
     };
 
     if (loading) {
-        return <div className="flex items-center justify-center h-64"><div className="w-10 h-10 border-3 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" /></div>;
+        return <LoadingScreen />;
     }
 
     return (
@@ -56,29 +57,29 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
-                <div className="glass-card p-4 flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/15 flex-shrink-0">
+            <div className="grid grid-cols-2 gap-3 stagger-children">
+                <div className="candy-card p-4 flex items-center space-x-3 transition-all hover:scale-[1.05]">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/15 flex-shrink-0 animate-bop">
                         <CalendarCheck className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <p className="text-xl font-bold text-slate-900">{records.length}</p>
-                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Sessions</p>
+                        <p className="text-xl font-black text-slate-900 leading-tight">{records.length}</p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Sessions</p>
                     </div>
                 </div>
-                <div className="glass-card p-4 flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/15 flex-shrink-0">
+                <div className="candy-card p-4 flex items-center space-x-3 transition-all hover:scale-[1.05]">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/15 flex-shrink-0 animate-bop" style={{ animationDelay: '0.2s' }}>
                         <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <p className="text-xl font-bold text-slate-900">{records.reduce((sum, r) => sum + r.studentCount, 0)}</p>
-                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Total Scans</p>
+                        <p className="text-xl font-black text-slate-900 leading-tight">{records.reduce((sum, r) => sum + r.studentCount, 0)}</p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Total Scans</p>
                     </div>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="glass-card overflow-hidden">
+            <div className="candy-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead>
@@ -90,7 +91,7 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
                                 <th className="text-center px-4 sm:px-6 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-50 stagger-children">
                             {records.length === 0 ? (
                                 <tr><td colSpan={5} className="text-center py-12 text-slate-400">
                                     <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
@@ -98,16 +99,16 @@ const FacultyRecords: React.FC<FacultyRecordsProps> = ({ authUser }) => {
                                 </td></tr>
                             ) : (
                                 records.map(r => (
-                                    <tr key={r.sessionId} className="hover:bg-slate-50/50 transition-colors">
+                                    <tr key={r.sessionId} className="hover:bg-slate-50/50 transition-colors group">
                                         <td className="px-4 sm:px-6 py-3">
-                                            <div className="text-sm font-semibold text-slate-900">{r.subjectName}</div>
-                                            <div className="text-[10px] text-slate-500">{r.subjectCode} • Sec {r.section}</div>
+                                            <div className="text-sm font-black text-slate-900 group-hover:text-indigo-600 transition-colors tracking-tight">{r.subjectName}</div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{r.subjectCode} • Sec {r.section}</div>
                                         </td>
-                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-600 hidden sm:table-cell">{r.room}</td>
-                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-600 hidden md:table-cell">{r.startTime}</td>
-                                        <td className="px-4 sm:px-6 py-3 text-center text-sm font-bold text-slate-900">{r.studentCount}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-500 font-bold hidden sm:table-cell">{r.room}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-xs text-slate-500 font-bold hidden md:table-cell">{r.startTime}</td>
+                                        <td className="px-4 sm:px-6 py-3 text-center text-sm font-black text-slate-900">{r.studentCount}</td>
                                         <td className="px-4 sm:px-6 py-3 text-center">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider ${r.status === 'COMPLETED' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${r.status === 'COMPLETED' ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-600'
                                                 }`}>{r.status}</span>
                                         </td>
                                     </tr>
