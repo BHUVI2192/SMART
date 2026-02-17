@@ -892,6 +892,125 @@ function handleGetStudentsForSection(params) {
 }
 
 // ============================================================
+// SESSIONS
+// ============================================================
+
+function handleCreateSession(body) {
+  const sheet = getSheet('Sessions');
+  const sessionId = generateId();
+  const token = generateSignedToken(sessionId);
+  const now = new Date();
+
+  // body: { facultyId, subjectCode, subjectName, room, section, endTime, semester, lat, lng }
+  sheet.appendRow([
+    sessionId,
+    body.facultyId,
+    body.subjectCode,
+    body.subjectName,
+    body.room,
+    body.section || '',
+    token,
+    now.toISOString(),
+    body.endTime || '',
+    'ONGOING',
+    body.lat || '',
+    body.lng || '',
+    body.semester || '' // Added Semester
+  ]);
+
+  return jsonResponse({
+    success: true,
+    session: {
+      sessionId: sessionId,
+      token: token,
+      startTime: now.toISOString(),
+      status: 'ONGOING'
+    }
+  });
+}
+
+function handleGetActiveSession(params) {
+  const sheet = getSheet('Sessions');
+  const sessions = sheetToJSON(sheet);
+
+  // Find all ONGOING sessions
+  let activeSessions = sessions.filter(s => s.Status === 'ONGOING');
+  
+  // Filter by Faculty
+  if (params.facultyId) {
+    activeSessions = activeSessions.filter(s => s.FacultyID === params.facultyId);
+  }
+
+  // Filter by Session ID
+  if (params.sessionId) {
+    activeSessions = activeSessions.filter(s => s.SessionID === params.sessionId);
+  }
+
+  // Filter for Student (Section/Semester)
+  if (params.section && params.semester) {
+    activeSessions = activeSessions.filter(s => 
+      String(s.Section) === String(params.section) && 
+      String(s.Semester) === String(params.semester)
+    );
+  }
+
+  return jsonResponse({
+    success: true,
+    sessions: activeSessions.map(s => ({
+      sessionId: s.SessionID,
+      facultyId: s.FacultyID,
+      subjectCode: s.SubjectCode,
+      subjectName: s.SubjectName,
+      room: s.Room,
+      section: s.Section,
+      semester: s.Semester,
+      token: s.Token,
+      startTime: s.StartTime,
+      endTime: s.EndTime,
+      status: s.Status,
+      lat: s.Lat,
+      lng: s.Lng
+    }))
+  });
+}
+
+function handleRotateToken(body) {
+  const sheet = getSheet('Sessions');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const sessionIdCol = headers.indexOf('SessionID');
+  const tokenCol = headers.indexOf('Token');
+
+  const newToken = generateSignedToken(body.sessionId);
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][sessionIdCol] === body.sessionId) {
+      sheet.getRange(i + 1, tokenCol + 1).setValue(newToken);
+      return jsonResponse({ success: true, token: newToken });
+    }
+  }
+
+  return jsonResponse({ success: false, error: 'Session not found' });
+}
+
+function handleEndSession(body) {
+  const sheet = getSheet('Sessions');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const sessionIdCol = headers.indexOf('SessionID');
+  const statusCol = headers.indexOf('Status');
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][sessionIdCol] === body.sessionId) {
+      sheet.getRange(i + 1, statusCol + 1).setValue('COMPLETED');
+      return jsonResponse({ success: true });
+    }
+  }
+
+  return jsonResponse({ success: false, error: 'Session not found' });
+}
+
+// ============================================================
 // TIMETABLE
 // ============================================================
 
@@ -900,19 +1019,32 @@ function handleGetTimetable(params) {
   const timetable = sheetToJSON(sheet);
 
   let filtered = timetable;
+
+  // Filter by Faculty
   if (params.facultyId) {
-    filtered = timetable.filter(t => t.FacultyID === params.facultyId);
+    filtered = filtered.filter(t => t.FacultyID === params.facultyId);
   }
+
+  // Filter by Student (Semester & Section)
+  if (params.semester && params.section) {
+    filtered = filtered.filter(t => 
+      String(t.Semester) === String(params.semester) && 
+      String(t.Section) === String(params.section)
+    );
+  }
+
+  // Filter by Day
   if (params.day) {
     filtered = filtered.filter(t => t.Day === params.day);
   }
 
   // If no classes found for "today" (e.g. Sunday or empty day), find the next active day
+  // Only do this if we are NOT specifically querying a non-today date logic
   const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   let currentDayIndex = daysOrder.indexOf(params.day);
   let displayDay = params.day;
 
-  if (filtered.length === 0 && currentDayIndex !== -1) {
+  if (filtered.length === 0 && currentDayIndex !== -1 && !params.facultyId) { // Auto-advance logic mostly for students
     // Check next 6 days
     for (let i = 1; i <= 6; i++) {
       const nextDayIndex = (currentDayIndex + i) % 7;
@@ -925,6 +1057,14 @@ function handleGetTimetable(params) {
         nextDayClasses = timetable.filter(t => t.FacultyID === params.facultyId);
       }
       nextDayClasses = nextDayClasses.filter(t => t.Day === nextDay);
+
+      // Re-apply student filters for the next day
+      if (params.semester && params.section) {
+        nextDayClasses = nextDayClasses.filter(t => 
+          String(t.Semester) === String(params.semester) && 
+          String(t.Section) === String(params.section)
+        );
+      }
 
       if (nextDayClasses.length > 0) {
         filtered = nextDayClasses;
@@ -939,8 +1079,12 @@ function handleGetTimetable(params) {
   const sessions = sheetToJSON(sessSheet);
 
   const enriched = filtered.map(t => {
+    // Find active session matching Subject, Section, and Semester (if available)
     const activeSession = sessions.find(s => 
-      s.SubjectCode === t.SubjectCode && s.Status === 'ONGOING'
+      s.SubjectCode === t.SubjectCode && 
+      s.Status === 'ONGOING' &&
+      String(s.Section) === String(t.Section) &&
+      String(s.Semester) === String(t.Semester) // Added Semester check
     );
     return {
       id: t.ID || (t.Day + '_' + t.StartTime + '_' + t.SubjectCode),
@@ -952,7 +1096,7 @@ function handleGetTimetable(params) {
       facultyId: t.FacultyID,
       section: t.Section,
       room: t.Room,
-      semester: t.Semester, // Added semester
+      semester: t.Semester,
       status: activeSession ? 'ONGOING' : (t.Status || 'UPCOMING'),
       sessionId: activeSession ? activeSession.SessionID : null
     };
@@ -988,7 +1132,8 @@ function handleAddClass(body) {
     body.facultyId,
     body.section || '',
     body.room || 'LH-101',
-    'UPCOMING'
+    'UPCOMING',
+    body.semester || '6' // Added Semester default 6
   ]);
 
   return jsonResponse({ success: true, id: id });

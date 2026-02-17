@@ -245,21 +245,39 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
     return `${h + hours}:${m < 10 ? '0' + m : m}`;
   }
 
-  // Helper to check if class is expired
+  // Helper to check if class is expired (now + 10 mins grace period after end time)
   const isClassExpired = (item: TimetableItem) => {
-    if (item.status === 'COMPLETED') return false; // Already done
+    if (item.status === 'COMPLETED') return false; // Already done (hidden or shown as completed)
     if (item.status === 'ONGOING') return false; // Active now
 
     const now = new Date();
     // Only check if it's today's class
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    if (item.day !== days[now.getDay()]) return false; // Not today
+    if (item.day !== days[now.getDay()]) return false; // Not today (or maybe yesterday's if we strictly check date? but standard timetable is day-based)
 
     const [endH, endM] = item.endTime.split(':').map(Number);
     const endTimeDate = new Date();
     endTimeDate.setHours(endH, endM, 0, 0);
 
+    // Extend window by 10 minutes
+    endTimeDate.setMinutes(endTimeDate.getMinutes() + 10);
+
     return now > endTimeDate;
+  };
+
+  // Helper to check if class can be started (now >= start time - 10 mins)
+  const isClassStartable = (item: TimetableItem) => {
+    if (item.status === 'ONGOING') return true;
+
+    const now = new Date();
+    const [startH, startM] = item.startTime.split(':').map(Number);
+    const startTimeDate = new Date();
+    startTimeDate.setHours(startH, startM, 0, 0);
+
+    // Allow start 10 mins before
+    startTimeDate.setMinutes(startTimeDate.getMinutes() - 10);
+
+    return now >= startTimeDate;
   };
 
   const displayName = authUser?.name || 'Professor';
@@ -378,10 +396,18 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
-            {timetable.map((session) => {
-              const expired = isClassExpired(session);
+            {timetable.filter(session => !isClassExpired(session)).map((session) => {
+              const expired = isClassExpired(session); // Should be false if filtered, but kept for logic
+              const startable = isClassStartable(session);
               const isCompleted = session.status === 'COMPLETED';
               const isOngoing = session.status === 'ONGOING';
+
+              // Calculate time until start for UI feedback
+              const now = new Date();
+              const [startH, startM] = session.startTime.split(':').map(Number);
+              const startDate = new Date();
+              startDate.setHours(startH, startM, 0, 0);
+              const minutesToStart = Math.ceil((startDate.getTime() - now.getTime()) / 60000);
 
               return (
                 <div key={session.id} className={`glass-card p-5 relative overflow-hidden transition-all duration-300 ${isOngoing ? 'ring-2 ring-indigo-400/30 border-indigo-200' :
@@ -451,20 +477,28 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
                     {!isCompleted ? (
                       <button
                         onClick={() => handleStartSession(session)}
-                        disabled={starting === session.id || expired}
+                        disabled={(!startable && !isOngoing) || starting === session.id || expired}
                         className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${expired
                           ? 'bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
-                          : isOngoing
-                            ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
-                            : 'gradient-primary text-white shadow-md shadow-blue-500/20'
-                          } disabled:opacity-70 disabled:transform-none`}
+                          : (!startable && !isOngoing)
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : isOngoing
+                              ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
+                              : 'gradient-primary text-white shadow-md shadow-blue-500/20'
+                          } disabled:opacity-90 disabled:transform-none`}
                       >
                         {starting === session.id ? (
                           <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> Starting...</>
                         ) : (
                           <>
-                            {isOngoing ? <PlayCircle className="w-4 h-4 mr-2" /> : expired ? <Clock className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
-                            {isOngoing ? 'Resume Session' : expired ? 'Class Ended' : 'Generate QR & Start'}
+                            {isOngoing ? <PlayCircle className="w-4 h-4 mr-2" /> :
+                              !startable ? <Clock className="w-4 h-4 mr-2" /> :
+                                expired ? <Clock className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+
+                            {isOngoing ? 'Resume Session' :
+                              expired ? 'Class Ended' :
+                                !startable ? `Opens in ${minutesToStart > 60 ? Math.floor(minutesToStart / 60) + 'h' : minutesToStart + 'm'}` :
+                                  'Generate QR & Start'}
                           </>
                         )}
                       </button>

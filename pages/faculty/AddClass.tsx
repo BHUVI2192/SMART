@@ -131,6 +131,13 @@ const AddClass: React.FC<AddClassProps> = ({ authUser }) => {
                                     value={newClassStart}
                                     onChange={(e) => setNewClassStart(e.target.value)}
                                 />
+                                {newClassStart && (
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                                            {new Date(`2000-01-01T${newClassStart}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -146,6 +153,13 @@ const AddClass: React.FC<AddClassProps> = ({ authUser }) => {
                                     value={newClassEnd}
                                     onChange={(e) => setNewClassEnd(e.target.value)}
                                 />
+                                {newClassEnd && (
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                                            {new Date(`2000-01-01T${newClassEnd}`).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

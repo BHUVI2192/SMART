@@ -72,6 +72,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
               facultyId: authUser?.id || '', subjectCode: entry.subjectCode,
               subjectName: entry.subjectName || entry.subjectCode, room: entry.room,
               section: entry.section, endTime: entry.endTime, lat: roomLat, lng: roomLng,
+              semester: entry.semester || 6 // Pass semester
             });
             setSessionId(newSession.sessionId); setQrToken(newSession.token);
             setSubjectName(entry.subjectName || entry.subjectCode);

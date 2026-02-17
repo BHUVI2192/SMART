@@ -127,17 +127,21 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
   };
 
   const loadTimetable = async (day: string) => {
-    // Fast path: cache check
+    // Fast path: cache check - Simplified to always try fetch for correct filtering updates
     if (timetableCache[day]) {
       setTimetable(timetableCache[day]);
     }
 
-    if (apiReady) {
+    if (apiReady && authUser) {
       try {
-        const ttResult = await apiGet('getTimetable', { day });
+        const result = await apiGet('getTimetable', {
+          day,
+          section: authUser.section,
+          semester: authUser.semester
+        });
 
-        if (ttResult.success) {
-          const items: TimetableItem[] = ttResult.timetable.map((t: any) => ({
+        if (result.success) {
+          const items: TimetableItem[] = result.timetable.map((t: any) => ({
             id: t.id, subjectName: t.subjectName || t.subjectCode,
             startTime: formatTime(t.startTime), endTime: formatTime(t.endTime), room: t.room, status: t.status,
           }));
