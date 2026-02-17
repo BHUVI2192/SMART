@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QrCode, MapPin, ShieldCheck, UserCircle, Lock, AlertCircle, Fingerprint, Wifi } from 'lucide-react';
+import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { login as apiLogin, AuthUser } from '../services/auth';
 import { isApiConfigured } from '../services/api';
 import { CURRENT_USER_MOCK } from '../data';
@@ -13,6 +14,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [deviceId, setDeviceId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [demoMode, setDemoMode] = useState(false);
@@ -20,13 +22,23 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
   const apiReady = isApiConfigured();
 
+  // Initialize FingerprintJS
+  React.useEffect(() => {
+    const setFp = async () => {
+      const fp = await FingerprintJS.load();
+      const { visitorId } = await fp.get();
+      setDeviceId(visitorId);
+    };
+    setFp();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const user = await apiLogin(userId, password);
+      const user = await apiLogin(userId, password, deviceId);
       onLogin(user);
 
       switch (user.role) {

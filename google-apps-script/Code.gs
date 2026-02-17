@@ -154,16 +154,65 @@ function doPost(e) {
 // ============================================================
 
 function handleLogin(params) {
-  const { userId, password } = params;
+  const { userId, password, deviceId } = params;
   const sheet = getSheet('Users');
-  const users = sheetToJSON(sheet);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  const usnCol = headers.indexOf('USN');
+  const emailCol = headers.indexOf('Email');
+  const passwordCol = headers.indexOf('Password');
+  const nameCol = headers.indexOf('Name');
+  const roleCol = headers.indexOf('Role');
+  const semCol = headers.indexOf('Semester');
+  const secCol = headers.indexOf('Section');
+  const deptCol = headers.indexOf('Department');
+  const deviceIdCol = headers.indexOf('DeviceID'); // New Column
 
-  const user = users.find(u => 
-    (u.USN === userId || u.Email === userId) && String(u.Password) === String(password)
-  );
+  let user = null;
+  let userRowIndex = -1;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if ((String(row[usnCol]) === String(userId) || String(row[emailCol]) === String(userId)) && String(row[passwordCol]) === String(password)) {
+      user = {
+        USN: row[usnCol],
+        Email: row[emailCol],
+        Name: row[nameCol],
+        Role: row[roleCol],
+        Semester: row[semCol],
+        Section: row[secCol],
+        Department: row[deptCol],
+        DeviceID: deviceIdCol !== -1 ? row[deviceIdCol] : ''
+      };
+      userRowIndex = i + 1;
+      break;
+    }
+  }
 
   if (!user) {
     return jsonResponse({ success: false, error: 'Invalid credentials' });
+  }
+
+  // DEVICE LOCK CHECK (For Students Only)
+  if (user.Role === 'STUDENT' && deviceId) {
+    if (deviceIdCol === -1) {
+       // Graceful fallback if column missing, or maybe log a warning? 
+       // For now, allow login but warn admin ideally.
+    } else {
+      const storedDeviceId = String(user.DeviceID || '');
+      
+      if (!storedDeviceId) {
+        // First time login - Bind device
+        sheet.getRange(userRowIndex, deviceIdCol + 1).setValue(deviceId);
+      } else if (storedDeviceId !== String(deviceId)) {
+        // Device Mismatch
+        return jsonResponse({ 
+          success: false, 
+          error: 'Login blocked: You are restricted to your registered device. Contact admin to reset.' 
+        });
+      }
+    }
   }
 
   // Log the login session
@@ -174,7 +223,8 @@ function handleLogin(params) {
         user.USN || user.Email,
         user.Role,
         new Date().toISOString(),
-        params.userAgent || 'Unknown'
+        params.userAgent || 'Unknown',
+        deviceId || 'Unknown'
       ]);
     }
   } catch (e) {
@@ -637,7 +687,7 @@ function handleMarkAttendance(body) {
 
   // B. Check Timestamp (10s Validity Window)
   // Allows late arrival of requests for recently rotated codes
-  if (isNaN(tokenTimestamp) || (Date.now() - tokenTimestamp > 10000)) { // 10 seconds
+  if (isNaN(tokenTimestamp) || (Date.now() - tokenTimestamp > 15000)) { // 15 seconds
       return jsonResponse({ success: false, error: 'QR code has expired.', code: 'INVALID_TOKEN' });
   }
 

@@ -134,7 +134,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
         const currentData = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
         if (currentData.sessionId === id) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ ...currentData, token: newToken }));
       }
-    }, 5000);
+    }, 10000);
     return () => clearInterval(qrInterval);
   }, [sessionId, qrToken, timeLeft]);
 

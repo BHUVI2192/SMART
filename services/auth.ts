@@ -20,9 +20,9 @@ export interface AuthUser {
     avatarInitials: string;
 }
 
-export async function login(userId: string, password: string): Promise<AuthUser> {
+export async function login(userId: string, password: string, deviceId?: string): Promise<AuthUser> {
     const userAgent = navigator.userAgent;
-    const result = await apiGet('login', { userId, password, userAgent });
+    const result = await apiGet('login', { userId, password, userAgent, deviceId });
 
     if (!result.success) {
         throw new Error(result.error || 'Login failed');
