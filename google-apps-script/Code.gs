@@ -14,6 +14,7 @@
 // CONFIGURATION — UPDATE THIS WITH YOUR GOOGLE SHEET ID
 // ============================================================
 const SHEET_ID = 'YOUR_GOOGLE_SHEET_ID_HERE';
+const SECRET_KEY = 'CHANGE_THIS_TO_A_LONG_RANDOM_STRING_FOR_PRODUCTION'; // Secret for HMAC
 
 // ============================================================
 // HELPERS
@@ -41,7 +42,19 @@ function jsonResponse(data) {
 }
 
 function generateToken() {
+  // Legacy function - kept for compatibility if needed, but unused in new flow
   return 'TKN_' + Date.now() + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 10);
+}
+
+function generateSignedToken(sessionId) {
+  const timestamp = Date.now();
+  const data = sessionId + '::' + timestamp;
+  const signature = Utilities.computeHmacSha256Signature(data, SECRET_KEY);
+  const signatureHex = signature.map(function(byte) {
+      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+  }).join('');
+  
+  return `TKN_HMAC_${sessionId}_${timestamp}_${signatureHex}`;
 }
 
 function generateId() {
@@ -253,7 +266,7 @@ function authorizeEmail() {
 function handleCreateSession(body) {
   const sheet = getSheet('Sessions');
   const sessionId = generateId();
-  const token = generateToken();
+  const token = generateSignedToken(sessionId);
   const now = new Date();
 
   // body: { facultyId, subjectCode, subjectName, room, section, endTime }
@@ -324,7 +337,7 @@ function handleRotateToken(body) {
   const sessionIdCol = headers.indexOf('SessionID');
   const tokenCol = headers.indexOf('Token');
 
-  const newToken = generateToken();
+  const newToken = generateSignedToken(body.sessionId);
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][sessionIdCol] === body.sessionId) {
@@ -605,10 +618,42 @@ function handleMarkAttendance(body) {
     return jsonResponse({ success: false, error: 'No active session found', code: 'SESSION_EXPIRED' });
   }
 
-  // 2. Validate token matches
-  if (session.Token !== body.token) {
-    return jsonResponse({ success: false, error: 'QR code has expired or is invalid', code: 'INVALID_TOKEN' });
+  // 2. Validate token signature and freshness (Stateless Check)
+  // Format: TKN_HMAC_sessionId_timestamp_signature
+  const parts = body.token.split('_');
+  
+  if (parts[0] !== 'TKN' || parts[1] !== 'HMAC' || parts.length !== 5) {
+     return jsonResponse({ success: false, error: 'Invalid QR format.', code: 'INVALID_TOKEN' });
   }
+
+  const tokenSessionId = parts[2];
+  const tokenTimestamp = parseInt(parts[3]);
+  const tokenSignature = parts[4];
+
+  // A. Check Session Match
+  if (tokenSessionId !== body.sessionId) {
+      return jsonResponse({ success: false, error: 'QR code belongs to a different session.', code: 'INVALID_TOKEN' });
+  }
+
+  // B. Check Timestamp (10s Validity Window)
+  // Allows late arrival of requests for recently rotated codes
+  if (isNaN(tokenTimestamp) || (Date.now() - tokenTimestamp > 10000)) { // 10 seconds
+      return jsonResponse({ success: false, error: 'QR code has expired.', code: 'INVALID_TOKEN' });
+  }
+
+  // C. Verify Signature
+  const data = tokenSessionId + '::' + tokenTimestamp;
+  const signature = Utilities.computeHmacSha256Signature(data, SECRET_KEY);
+  const expectedSignature = signature.map(function(byte) {
+      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+  }).join('');
+
+  if (tokenSignature !== expectedSignature) {
+      return jsonResponse({ success: false, error: 'Invalid QR signature.', code: 'INVALID_TOKEN' });
+  }
+  
+  // Note: We deliberately SKIP checking if session.Token === body.token
+  // This allows the "previous" token to still work if it's within the 10s window.
 
   // 3. Check for duplicate scan
   const attSheet = getSheet('Attendance');
@@ -619,16 +664,7 @@ function handleMarkAttendance(body) {
     return jsonResponse({ success: false, error: 'You have already marked attendance for this session. Status: ' + (duplicate.VerifyStatus || 'PRESENT'), code: 'DUPLICATE' });
   }
 
-  // 4. Token timestamp validation (20s expiry)
-  // Ensures tokens are fresh even if the session hasn't rotated yet
-  const parts = body.token.split('_');
-  if (parts.length >= 2) {
-    const tokenTime = parseInt(parts[1]);
-    // 20 seconds validity window to allow for network latency but prevent reuse of old codes
-    if (!isNaN(tokenTime) && (Date.now() - tokenTime > 20000)) {
-      return jsonResponse({ success: false, error: 'QR code has expired.', code: 'INVALID_TOKEN' });
-    }
-  }
+
 
   // 5. Mark attendance
   const now = new Date();
