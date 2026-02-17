@@ -134,7 +134,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
         const currentData = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
         if (currentData.sessionId === id) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ ...currentData, token: newToken }));
       }
-    }, 30000);
+    }, 5000);
     return () => clearInterval(qrInterval);
   }, [sessionId, qrToken, timeLeft]);
 
@@ -321,7 +321,7 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
                     </div>
                     <div className="flex items-center space-x-2 text-xs text-slate-500 mb-2">
                       <RefreshCw className="w-3 h-3 animate-spin" style={{ animationDuration: '3s' }} />
-                      <span className="font-medium">Token rotates every 30s</span>
+                      <span className="font-medium">Token rotates every 5s</span>
                     </div>
                     <p className="text-[10px] text-slate-400 truncate max-w-[200px] font-mono">{qrToken}</p>
                     <div className="mt-4 flex items-center space-x-2 text-xs text-slate-500 bg-slate-50 px-4 py-2 rounded-xl">

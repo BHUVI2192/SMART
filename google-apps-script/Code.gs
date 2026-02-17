@@ -41,7 +41,7 @@ function jsonResponse(data) {
 }
 
 function generateToken() {
-  return 'TKN_' + Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+  return 'TKN_' + Date.now() + '_' + Utilities.getUuid().replace(/-/g, '').substring(0, 10);
 }
 
 function generateId() {
@@ -619,26 +619,14 @@ function handleMarkAttendance(body) {
     return jsonResponse({ success: false, error: 'You have already marked attendance for this session. Status: ' + (duplicate.VerifyStatus || 'PRESENT'), code: 'DUPLICATE' });
   }
 
-  // 4. GPS geofencing check (server-side validation)
-  if (session.Lat && session.Lng && body.gpsLat && body.gpsLng) {
-    const distance = haversineDistance(
-      parseFloat(body.gpsLat), parseFloat(body.gpsLng),
-      parseFloat(session.Lat), parseFloat(session.Lng)
-    );
-
-    // Get room radius (default 100 meters)
-    const roomsSheet = getSheet('Rooms');
-    const rooms = sheetToJSON(roomsSheet);
-    const room = rooms.find(r => r.RoomName === session.Room);
-    const maxRadius = room ? parseFloat(room.RadiusMeters) : 100;
-
-    if (distance > maxRadius) {
-      return jsonResponse({ 
-        success: false, 
-        error: 'You are ' + Math.round(distance) + 'm away from the classroom (max: ' + maxRadius + 'm)', 
-        code: 'GPS_FAIL',
-        distance: Math.round(distance)
-      });
+  // 4. Token timestamp validation (20s expiry)
+  // Ensures tokens are fresh even if the session hasn't rotated yet
+  const parts = body.token.split('_');
+  if (parts.length >= 2) {
+    const tokenTime = parseInt(parts[1]);
+    // 20 seconds validity window to allow for network latency but prevent reuse of old codes
+    if (!isNaN(tokenTime) && (Date.now() - tokenTime > 20000)) {
+      return jsonResponse({ success: false, error: 'QR code has expired.', code: 'INVALID_TOKEN' });
     }
   }
 
