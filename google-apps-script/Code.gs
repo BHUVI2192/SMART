@@ -950,7 +950,9 @@ function handleGetActiveSession(params) {
   if (params.section && params.semester) {
     activeSessions = activeSessions.filter(s => 
       String(s.Section) === String(params.section) && 
-      String(s.Semester) === String(params.semester)
+      // If semester is missing in session (old data), allow it temporarily or strictly filter? 
+      // User reported "NOT SHOWING", likely due to mismatch. Let's make it lenient if session has no semester.
+      (!s.Semester || String(s.Semester) === String(params.semester))
     );
   }
 
@@ -1028,7 +1030,8 @@ function handleGetTimetable(params) {
   // Filter by Student (Semester & Section)
   if (params.semester && params.section) {
     filtered = filtered.filter(t => 
-      String(t.Semester) === String(params.semester) && 
+      // If timetable entry has NO semester defined, assume it applies to all or basic logic (legacy support)
+      (!t.Semester || String(t.Semester) === String(params.semester)) && 
       String(t.Section) === String(params.section)
     );
   }

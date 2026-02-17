@@ -477,28 +477,20 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ authUser }) => {
                     {!isCompleted ? (
                       <button
                         onClick={() => handleStartSession(session)}
-                        disabled={(!startable && !isOngoing) || starting === session.id || expired}
+                        disabled={starting === session.id || expired}
                         className={`w-full flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 transform hover:-translate-y-0.5 ${expired
                           ? 'bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
-                          : (!startable && !isOngoing)
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : isOngoing
-                              ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
-                              : 'gradient-primary text-white shadow-md shadow-blue-500/20'
-                          } disabled:opacity-90 disabled:transform-none`}
+                          : isOngoing
+                            ? 'gradient-success text-white shadow-md shadow-emerald-500/20'
+                            : 'gradient-primary text-white shadow-md shadow-blue-500/20'
+                          } disabled:opacity-70 disabled:transform-none`}
                       >
                         {starting === session.id ? (
                           <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" /> Starting...</>
                         ) : (
                           <>
-                            {isOngoing ? <PlayCircle className="w-4 h-4 mr-2" /> :
-                              !startable ? <Clock className="w-4 h-4 mr-2" /> :
-                                expired ? <Clock className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
-
-                            {isOngoing ? 'Resume Session' :
-                              expired ? 'Class Ended' :
-                                !startable ? `Opens in ${minutesToStart > 60 ? Math.floor(minutesToStart / 60) + 'h' : minutesToStart + 'm'}` :
-                                  'Generate QR & Start'}
+                            {isOngoing ? <PlayCircle className="w-4 h-4 mr-2" /> : expired ? <Clock className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                            {isOngoing ? 'Resume Session' : expired ? 'Class Ended' : 'Generate QR & Start'}
                           </>
                         )}
                       </button>
