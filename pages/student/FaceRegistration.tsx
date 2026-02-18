@@ -2,8 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as faceapi from 'face-api.js';
-import { apiPost } from '../../utils/api';
-import { getCurrentUser } from '../../utils/auth';
+import { apiPost } from '../../services/api';
+import { getCurrentUser } from '../../services/auth';
 
 const FaceRegistration: React.FC = () => {
     const navigate = useNavigate();
