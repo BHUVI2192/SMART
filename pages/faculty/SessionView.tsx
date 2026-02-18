@@ -123,10 +123,18 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Ref to track timeLeft without triggering re-renders in the rotation effect
+  const timeLeftRef = useRef(timeLeft);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+
   useEffect(() => {
-    if (!sessionId || !qrToken) return;
+    // Rotation Interval Logic
+    if (!sessionId) return;
+
     const qrInterval = setInterval(async () => {
-      if (timeLeft <= 0) return;
+      // Check current time from ref to allow interval to persist
+      if (timeLeftRef.current <= 0) return;
+
       if (apiReady) {
         try {
           const newToken = await rotateToken(sessionId);
@@ -141,9 +149,13 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
         const currentData = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
         if (currentData.sessionId === id) localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ ...currentData, token: newToken }));
       }
-    }, 10000);
+    }, 10000); // 10 seconds
+
     return () => clearInterval(qrInterval);
-  }, [sessionId, qrToken, timeLeft]);
+    // CRITICAL FIX: Removed 'timeLeft' and 'qrToken' from dependencies.
+    // 'timeLeft' caused reset every 1s. 'qrToken' caused reset on every update.
+    // Now the interval runs stable every 10s.
+  }, [sessionId, apiReady, id]);
 
   useEffect(() => {
     if (!sessionId) return;

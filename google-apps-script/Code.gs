@@ -910,46 +910,42 @@ function handleCreateSession(body) {
 
 
 
+
 function handleRotateToken(body) {
   const sessSheet = getSheet('Sessions');
-  const sessions = sheetToJSON(sessSheet);
+  const sessionId = body.sessionId;
   
-  // Create a map of SessionID to row index (1-based)
-  // We need to find the exact row to update
-  const data = sessSheet.getDataRange().getValues();
-  // Header is row 0. Data starts row 1.
-  let rowIndex = -1;
-  const session = sessions.find((s, index) => {
-    if (s.SessionID === body.sessionId) {
-      rowIndex = index + 2; // +1 for header, +1 for 0-index basis of 'index'
-      return true;
-    }
-    return false;
-  });
-
-  if (!session) {
-    return jsonResponse({ success: false, error: 'Session not found' });
+  // ROBUST ROW FINDING: Use TextFinder to get exact row
+  const finder = sessSheet.createTextFinder(sessionId);
+  const found = finder.findNext();
+  
+  if (!found) {
+    return jsonResponse({ success: false, error: 'Session ID not found in sheet' });
   }
-
-  if (session.Status !== 'ONGOING') {
-    return jsonResponse({ success: false, error: 'Session is not active' });
+  
+  const rowIndex = found.getRow();
+  const sessionStatus = sessSheet.getRange(rowIndex, 10).getValue(); // Status is Col 10 (J)
+  
+  if (sessionStatus !== 'ONGOING') {
+    return jsonResponse({ success: false, error: 'Session is not active (Status: ' + sessionStatus + ')' });
   }
 
   // Generate new signed token
-  const newToken = generateSignedToken(session.SessionID);
+  const newToken = generateSignedToken(sessionId);
 
   // STATEFUL UPDATE: Save the new token to the sheet
-  // 'Token' is the 7th column (index 6) in our schema:
-  // [SessionID, FacultyID, SubjectCode, SubjectName, Room, Section, Token, StartTime...]
-  if (rowIndex > -1) {
-     // Force cell to be text to prevent weird formatting
-     sessSheet.getRange(rowIndex, 7).setNumberFormat('@').setValue(newToken);
-     SpreadsheetApp.flush(); // Force update immediately
-  }
+  // 'Token' is the 7th column (Column G)
+  sessSheet.getRange(rowIndex, 7).setNumberFormat('@').setValue(newToken);
+  SpreadsheetApp.flush(); // Force update immediately
   
   return jsonResponse({
     success: true,
-    token: newToken
+    token: newToken,
+    debug: {
+      updatedRow: rowIndex,
+      status: sessionStatus,
+      timestamp: new Date().toISOString()
+    }
   });
 }
 
