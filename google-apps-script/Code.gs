@@ -98,6 +98,8 @@ function doGet(e) {
         return handleGetSwappableClasses(e.parameter);
       case 'getNotifications':
         return handleGetNotifications(e.parameter);
+      case 'getFaceData':
+        return handleGetFaceData(e.parameter);
       case 'forgotPassword':
         return handleForgotPassword(e.parameter);
       case 'seedData':
