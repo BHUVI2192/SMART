@@ -618,42 +618,21 @@ function handleMarkAttendance(body) {
     return jsonResponse({ success: false, error: 'No active session found', code: 'SESSION_EXPIRED' });
   }
 
-  // 2. Validate token signature and freshness (Stateless Check)
-  // Format: TKN_HMAC_sessionId_timestamp_signature
+  // 2. Validate Token (Stateful Check)
+  // We compare the scanned token DIRECTLY with the token stored in the Session sheet.
+  // This eliminates time drift issues. If the tokens match, it's valid.
+  if (session.Token !== body.token) {
+      return jsonResponse({ success: false, error: 'QR code has expired (mismatch).', code: 'INVALID_TOKEN' });
+  }
+
+  // Legacy Check (Optional - keep format validation just in case)
   const parts = body.token.split('_');
-  
-  if (parts[0] !== 'TKN' || parts[1] !== 'HMAC' || parts.length !== 5) {
+  if (parts[0] !== 'TKN' || parts[1] !== 'HMAC') {
      return jsonResponse({ success: false, error: 'Invalid QR format.', code: 'INVALID_TOKEN' });
   }
-
-  const tokenSessionId = parts[2];
-  const tokenTimestamp = parseInt(parts[3]);
-  const tokenSignature = parts[4];
-
-  // A. Check Session Match
-  if (tokenSessionId !== body.sessionId) {
-      return jsonResponse({ success: false, error: 'QR code belongs to a different session.', code: 'INVALID_TOKEN' });
-  }
-
-  // B. Check Timestamp (10s Validity Window)
-  // Allows late arrival of requests for recently rotated codes
-  if (isNaN(tokenTimestamp) || (Date.now() - tokenTimestamp > 15000)) { // 15 seconds
-      return jsonResponse({ success: false, error: 'QR code has expired.', code: 'INVALID_TOKEN' });
-  }
-
-  // C. Verify Signature
-  const data = tokenSessionId + '::' + tokenTimestamp;
-  const signature = Utilities.computeHmacSha256Signature(data, SECRET_KEY);
-  const expectedSignature = signature.map(function(byte) {
-      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-  }).join('');
-
-  if (tokenSignature !== expectedSignature) {
-      return jsonResponse({ success: false, error: 'Invalid QR signature.', code: 'INVALID_TOKEN' });
-  }
   
-  // Note: We deliberately SKIP checking if session.Token === body.token
-  // This allows the "previous" token to still work if it's within the 10s window.
+  // We skip timestamp checks because we trust the database state.
+  // As long as the QR is currently on the teacher's screen (and thus in DB), it's valid.
 
   // 3. Check for duplicate scan
   const attSheet = getSheet('Attendance');
@@ -926,6 +905,51 @@ function handleCreateSession(body) {
       startTime: now.toISOString(),
       status: 'ONGOING'
     }
+  });
+}
+
+
+
+function handleRotateToken(body) {
+  const sessSheet = getSheet('Sessions');
+  const sessions = sheetToJSON(sessSheet);
+  
+  // Create a map of SessionID to row index (1-based)
+  // We need to find the exact row to update
+  const data = sessSheet.getDataRange().getValues();
+  // Header is row 0. Data starts row 1.
+  let rowIndex = -1;
+  const session = sessions.find((s, index) => {
+    if (s.SessionID === body.sessionId) {
+      rowIndex = index + 2; // +1 for header, +1 for 0-index basis of 'index'
+      return true;
+    }
+    return false;
+  });
+
+  if (!session) {
+    return jsonResponse({ success: false, error: 'Session not found' });
+  }
+
+  if (session.Status !== 'ONGOING') {
+    return jsonResponse({ success: false, error: 'Session is not active' });
+  }
+
+  // Generate new signed token
+  const newToken = generateSignedToken(session.SessionID);
+
+  // STATEFUL UPDATE: Save the new token to the sheet
+  // 'Token' is the 7th column (index 6) in our schema:
+  // [SessionID, FacultyID, SubjectCode, SubjectName, Room, Section, Token, StartTime...]
+  if (rowIndex > -1) {
+     // Force cell to be text to prevent weird formatting
+     sessSheet.getRange(rowIndex, 7).setNumberFormat('@').setValue(newToken);
+     SpreadsheetApp.flush(); // Force update immediately
+  }
+  
+  return jsonResponse({
+    success: true,
+    token: newToken
   });
 }
 

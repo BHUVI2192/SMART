@@ -128,7 +128,13 @@ const SessionView: React.FC<SessionViewProps> = ({ authUser }) => {
     const qrInterval = setInterval(async () => {
       if (timeLeft <= 0) return;
       if (apiReady) {
-        try { const newToken = await rotateToken(sessionId); setQrToken(newToken); } catch (err) { console.error('Failed to rotate:', err); }
+        try {
+          const newToken = await rotateToken(sessionId);
+          console.log('Token rotated successfully:', newToken);
+          setQrToken(newToken);
+        } catch (err) {
+          console.error('Failed to rotate token. Backend might be unreachable or session invalid.', err);
+        }
       } else {
         const newToken = `TOKEN_${Math.random().toString(36).substr(2, 9)}`;
         setQrToken(newToken);
