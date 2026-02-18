@@ -79,8 +79,11 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
   const startLiveCamera = async () => {
     setCameraError('');
     try {
+      // Default to back camera for QR (CAMERA), front for Face (FACE_VERIFY)
+      const idealFacingMode = stage === 'FACE_VERIFY' ? 'user' : 'environment';
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode: idealFacingMode, width: { ideal: 640 }, height: { ideal: 480 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {

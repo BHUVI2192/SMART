@@ -255,6 +255,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
 
       {/* Top Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Face ID Setup Card - High Visibility */}
+        <div
+          onClick={() => navigate('/student/face-register')}
+          className="col-span-1 lg:col-span-3 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-6 text-white flex items-center justify-between cursor-pointer hover:scale-[1.02] transition-transform shadow-xl shadow-purple-900/20"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+              <div className="w-6 h-6 rounded-full border-2 border-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">One-Time Setup</h3>
+              <p className="text-purple-100 text-sm">Register your Face ID to verify attendance.</p>
+            </div>
+          </div>
+          <button className="bg-white text-purple-600 px-6 py-2 rounded-full font-bold text-sm">
+            Setup Now
+          </button>
+        </div>
+
         {/* Progress Ring Card */}
         <div className="candy-card p-6 sm:p-10 flex flex-col items-center justify-center">
           <h3 className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mb-8">Performance</h3>
@@ -264,13 +283,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ authUser }) => {
             {isGood ? 'Excellent Track' : 'Needs Attention'}
           </div>
 
-          <button
-            onClick={() => navigate('/student/face-register')}
-            className="mt-6 w-full py-3 rounded-xl bg-purple-50 text-purple-600 font-bold text-sm hover:bg-purple-100 transition-colors flex items-center justify-center dashed-border"
-          >
-            <div className="w-2 h-2 rounded-full bg-purple-500 mr-2 animate-pulse" />
-            Set Up Face ID
-          </button>
+          <div className={`mt-10 flex items-center px-6 py-2 rounded-full font-black text-xs uppercase tracking-wider ${isGood ? 'bg-indigo-50 text-indigo-600' : 'bg-amber-50 text-amber-600'}`}>
+            <TrendingUp className="w-4 h-4 mr-2" />
+            {isGood ? 'Excellent Track' : 'Needs Attention'}
+          </div>
         </div>
 
         {/* Active Class Card */}
