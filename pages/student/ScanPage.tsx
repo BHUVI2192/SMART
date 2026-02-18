@@ -54,7 +54,7 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
       try {
         const MODEL_URL = '/models';
         await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL), // Face detector
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL), // Face detector
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
@@ -132,8 +132,8 @@ const ScanPage: React.FC<ScanPageProps> = ({ user, authUser }) => {
   const verifyFaceFrame = async () => {
     if (!videoRef.current || !faceDescriptor) return;
 
-    // Detect single face
-    const detection = await faceapi.detectSingleFace(videoRef.current).withFaceLandmarks().withFaceDescriptor();
+    // Detect single face using Tiny Face Detector
+    const detection = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
     if (detection) {
       const distance = faceapi.euclideanDistance(faceDescriptor, detection.descriptor);

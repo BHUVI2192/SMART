@@ -25,7 +25,7 @@ const FaceRegistration: React.FC = () => {
         try {
             const MODEL_URL = '/models';
             await Promise.all([
-                faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                 faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
             ]);
@@ -54,7 +54,7 @@ const FaceRegistration: React.FC = () => {
         if (!videoRef.current || !modelLoaded) return;
         setStatus('Detecting face...');
 
-        const detections = await faceapi.detectSingleFace(videoRef.current).withFaceLandmarks().withFaceDescriptor();
+        const detections = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
         if (detections) {
             // We have a face!
