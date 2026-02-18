@@ -8,6 +8,7 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import SessionView from './pages/faculty/SessionView';
 import ScanPage from './pages/student/ScanPage';
 import StudentHistory from './pages/student/StudentHistory';
+import FaceRegistration from './pages/student/FaceRegistration';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminTimetable from './pages/admin/AdminTimetable';
 import FacultyRecords from './pages/faculty/FacultyRecords';
@@ -155,6 +156,14 @@ const App: React.FC = () => {
           element={
             <ProtectedRoute user={user} allowedRoles={['STUDENT']}>
               <StudentHistory authUser={authUser} />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/face-register"
+          element={
+            <ProtectedRoute user={user} allowedRoles={['STUDENT']}>
+              <FaceRegistration />
             </ProtectedRoute>
           }
         />

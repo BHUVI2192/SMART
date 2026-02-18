@@ -125,6 +125,8 @@ function doPost(e) {
         return handleCreateSession(body);
       case 'rotateToken':
         return handleRotateToken(body);
+      case 'registerFace':
+        return handleRegisterFace(body);
       case 'endSession':
         return handleEndSession(body);
       case 'markAttendance':
@@ -1304,6 +1306,67 @@ function seedData() {
   // --- LoginLogs Tab ---
   createSheetIfNotExists('LoginLogs', ['UserID', 'Role', 'Timestamp', 'UserAgent']);
 
+
   // --- Notifications Tab ---
   createSheetIfNotExists('Notifications', ['ID', 'RecipientID', 'Title', 'Message', 'Timestamp', 'ReadStatus']);
+}
+
+// =========================================
+// FACE VERIFICATION HANDLERS (Drive-Backed)
+// =========================================
+
+function handleRegisterFace(body) {
+  try {
+    const usn = body.usn;
+    const descriptor = body.descriptor; // JSON string of face descriptor
+
+    if (!usn || !descriptor) {
+      return jsonResponse({ success: false, error: 'Missing USN or Face Descriptor' });
+    }
+
+    const folder = getOrCreateFolder('FaceData');
+    const fileName = usn + '.json';
+    
+    // Check if file exists, if so, update it
+    const files = folder.getFilesByName(fileName);
+    if (files.hasNext()) {
+      const file = files.next();
+      file.setContent(JSON.stringify(descriptor));
+    } else {
+      folder.createFile(fileName, JSON.stringify(descriptor), MimeType.PLAIN_TEXT);
+    }
+
+    return jsonResponse({ success: true, message: 'Face data registered successfully' });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.toString() });
+  }
+}
+
+function handleGetFaceData(params) {
+  try {
+    const usn = params.usn;
+    if (!usn) return jsonResponse({ success: false, error: 'Missing USN' });
+
+    const folder = getOrCreateFolder('FaceData');
+    const files = folder.getFilesByName(usn + '.json');
+    
+    if (files.hasNext()) {
+      const file = files.next();
+      const content = file.getBlob().getDataAsString();
+      return jsonResponse({ success: true, descriptor: JSON.parse(content) });
+    } else {
+      return jsonResponse({ success: false, error: 'Face data not found', code: 'NO_FACE_DATA' });
+    }
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.toString() });
+  }
+}
+
+function getOrCreateFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    return folders.next();
+  } else {
+    return DriveApp.createFolder(folderName);
+  }
 }

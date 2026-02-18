@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "face-api.js": "^0.22.2",
     "jsqr": "1.4.0",
     "lottie-react": "^2.4.1",
     "lucide-react": "0.294.0",
