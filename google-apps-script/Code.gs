@@ -946,15 +946,14 @@ function handleGetActiveSession(params) {
     activeSessions = activeSessions.filter(s => s.SessionID === params.sessionId);
   }
 
-  // Filter for Student (Section/Semester)
-  if (params.section && params.semester) {
+  // Filter for Student (REMOVED: Show all active sessions to students)
+  /*
+  if (params.section) {
     activeSessions = activeSessions.filter(s => 
-      String(s.Section) === String(params.section) && 
-      // If semester is missing in session (old data), allow it temporarily or strictly filter? 
-      // User reported "NOT SHOWING", likely due to mismatch. Let's make it lenient if session has no semester.
-      (!s.Semester || String(s.Semester) === String(params.semester))
+      String(s.Section) === String(params.section)
     );
   }
+  */
 
   return jsonResponse({
     success: true,
@@ -1027,14 +1026,14 @@ function handleGetTimetable(params) {
     filtered = filtered.filter(t => t.FacultyID === params.facultyId);
   }
 
-  // Filter by Student (Semester & Section)
-  if (params.semester && params.section) {
+  // Filter by Student (REMOVED: Show all classes to students)
+  /*
+  if (params.section) {
     filtered = filtered.filter(t => 
-      // If timetable entry has NO semester defined, assume it applies to all or basic logic (legacy support)
-      (!t.Semester || String(t.Semester) === String(params.semester)) && 
       String(t.Section) === String(params.section)
     );
   }
+  */
 
   // Filter by Day
   if (params.day) {
